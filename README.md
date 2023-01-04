@@ -1,6 +1,4 @@
 
-Sonnensystem.py
-
 Kleines Python GUI zur Ansicht der Planetenstellungen bei beliebigen Daten.
 
 Für Windows-Benutzer ist unter Releases eine ZIP-Datei mit kompiliertem Programm verfügbar. Zum Starten nach Herunterladen und Entzippen "Sonnensystem.exe" ausführen.
