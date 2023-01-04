@@ -1,3 +1,4 @@
 /dist
 /versions
+/releases
 /pyinstaller*
