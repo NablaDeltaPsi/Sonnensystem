@@ -1,4 +1,6 @@
 /dist
 /versions
 /releases
+/build
+/__pycache__
 /pyinstaller*

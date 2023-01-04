@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="700"
+   height="700"
+   viewBox="0 0 699.99998 699.99997"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="Planetenstellung_icon.svg"
+   inkscape:export-filename="D:\Computer\Python\Planetenstellung\Planetenstellung_icon.png"
+   inkscape:export-xdpi="150"
+   inkscape:export-ydpi="150">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.49497476"
+     inkscape:cx="22.96859"
+     inkscape:cy="472.0655"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     borderlayer="false"
+     units="px"
+     inkscape:showpageshadow="false"
+     showborder="false"
+     inkscape:window-width="1791"
+     inkscape:window-height="1057"
+     inkscape:window-x="121"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-352.36225)">
+    <circle
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:50;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path4136"
+       cx="-349.42856"
+       cy="-703.50513"
+       r="321.37045"
+       transform="scale(-1,-1)" />
+    <circle
+       r="200.12413"
+       cy="-703.50513"
+       cx="-349.42856"
+       id="circle4144"
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:50;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       transform="scale(-1,-1)" />
+    <circle
+       style="opacity:1;fill:#ffed05;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:4.61275482;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="circle4150"
+       cx="-349.42856"
+       cy="-703.50513"
+       r="87.584724"
+       transform="scale(-1,-1)" />
+    <circle
+       style="opacity:1;fill:#69aff5;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:5.08744621;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="circle4166"
+       cx="-512.53522"
+       cy="-820.92029"
+       r="61.550426"
+       transform="scale(-1,-1)" />
+    <circle
+       r="61.550426"
+       cy="-421.75061"
+       cx="-192.84253"
+       id="circle4168"
+       style="opacity:1;fill:#ff8345;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:5.08744621;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       transform="scale(-1,-1)" />
+  </g>
+</svg>
