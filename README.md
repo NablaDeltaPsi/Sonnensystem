@@ -3,14 +3,10 @@ Python GUI zur Ansicht der Planetenstellungen bei beliebigen Daten.
 
 Für Windows-Benutzer ist unter Releases eine ZIP-Datei mit kompiliertem Programm verfügbar. Zum Starten nach Herunterladen und Entzippen "Sonnensystem.exe" ausführen.
 
-###############################################
-
 ![grafik](https://user-images.githubusercontent.com/98178269/210569379-362148c9-2703-4154-9f00-a72964684468.png)
 ![grafik](https://user-images.githubusercontent.com/98178269/210569401-2f97c7b2-51c4-43d4-b802-c6ac27787071.png)
 ![grafik](https://user-images.githubusercontent.com/98178269/210569415-c91bf66c-3ddd-4b6d-9c1a-274ada5952b5.png)
 ![grafik](https://user-images.githubusercontent.com/98178269/210569427-00bf9f89-40ab-4032-94a7-72653927ffee.png)
-
-###############################################
 
 Ansichten: Das Startfenster zeigt die Planetenstellungen mit äquidistanten Bahnen. Die Erde ist im Winter der Nordhalbkugel oberhalb, im Frühling links, im Sommer unterhalb und im Herbst rechts der Sonne. Die Planeten sind auf kreisförmige Bahnen mit gleichem Abstand gezeichnet. Die Erde wird vom Mond begleitet. Mit der Schaltfläche O, oder mit der Tab-Taste erreicht man alternative, heliozentrische Ansichten der inneren und äußeren Planeten mit realen Orbits. Einzig der Abstand des Mondes zur Erde ist in diesen Ansichten nicht maßstabsgetreu. Als optische Hilfe für Oppositionen und Konjunktionen ist die dunkelblaue Linie eine erweiterte Verbindungslinie von der Sonne zur Erde. Planeten sind nachts auf der der Sonne abgewandten Seite der Erde sichtbar, dabei rechts der blauen Linie eher Abends, links der blauen Linie eher morgens. Die vierte Ansicht ist eine geozentrische Ansicht der Mondposition. Im Gegensatz zu den Orbits der vorherigen Ansichten ist der Orbit des Mondes hier nach seinem mittleren Abstand kreisförmig gezeichnet, um Perigäum und Apogäum besser nachvollziehen zu können. Die durchgezogene bzw. gestrichelte blaue Linie weist hier zur Sonne bzw. von der Sonne weg und zeigt bei überschreiten des Mondes Neumond bzw. Vollmond an.
 
