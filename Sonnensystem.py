@@ -10,7 +10,6 @@ import matplotlib.backends.backend_tkcairo as tkcairo
 import datetime as dt
 import os
 import time
-import functools
 import warnings
 import ctypes
 import astropy as ap
@@ -761,7 +760,7 @@ class Plotcanvas():
         self.canvas.draw()
 
     def plot(self):
-    
+            
         ###### SET UP ######
 
         scale = 1.8 * self.root.guisize / 400
@@ -903,10 +902,6 @@ class Plotcanvas():
         
         self.canvas.draw()
 
-    def clearplot(self):
-        self.ax.cla()
-        self.canvas.draw()
-
 
 
 
@@ -940,7 +935,6 @@ class Planet():
         self.z = 0
         self.date = dt.datetime(2000, 1, 1, 12, 0, 0)
 
-    @functools.cache
     def set_date(self, datetime):
 
         self.date = datetime
