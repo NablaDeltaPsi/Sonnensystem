@@ -1,5 +1,5 @@
 
-global GUI_version; GUI_version = '2.1'
+global GUI_version; GUI_version = '2.2'
 
 import tkinter as tk
 import tkinter.font
