@@ -1,5 +1,5 @@
 
-global GUI_version; GUI_version = '2.0'
+global GUI_version; GUI_version = '2.1'
 
 import tkinter as tk
 import tkinter.font
@@ -379,25 +379,11 @@ class NewGUI():
         self.replot()
 
     def switch_view(self, *event):
-        if self.button_view_on == 0:
-            self.button_view_on = 1
-        elif self.button_view_on == 1:
-            self.button_view_on = 2
-        elif self.button_view_on == 2:
-            self.button_view_on = 3
-        else:
-            self.button_view_on = 0
+        self.button_view_on = (self.button_view_on + 1) % 7
         self.replot()
 
     def switch_view_rev(self, *event):
-        if self.button_view_on == 1:
-            self.button_view_on = 0
-        elif self.button_view_on == 2:
-            self.button_view_on = 1
-        elif self.button_view_on == 3:
-            self.button_view_on = 2
-        else:
-            self.button_view_on = 3
+        self.button_view_on = (self.button_view_on - 1 + 7) % 7
         self.replot()
     
     def replot_p(self, *args):
@@ -791,8 +777,19 @@ class Plotcanvas():
 
         x = np.zeros(len(self.root.all_planets))
         y = np.zeros(len(self.root.all_planets))
+        
+        for i in range(9):
+            dx = 0.22 * np.cos(self.plon[i] / 180 * np.pi)
+            dy = 0.22 * np.sin(self.plon[i] / 180 * np.pi)
+            x[i] = self.root.all_planets[i].x
+            y[i] = self.root.all_planets[i].y
 
-        ###### PLOT MODE ALLE ######
+        # calc relative moon position
+        Moon_orbit = Moon_orbit / np.sqrt((x[2]-x[8])**2 + (y[2]-y[8])**2)
+        x[8] = x[8]-x[2]
+        y[8] = y[8]-y[2]
+
+        ###### EQUIDISTANT VIEW ######
         if self.root.button_view_on == 0:
 
             # calc and plot planet positions and orbits
@@ -808,23 +805,30 @@ class Plotcanvas():
             self.ax.add_patch(plt.Circle((x[5], y[5]), Saturnring_outer, color=planetcolors[5,:], zorder=1))
             self.ax.add_patch(plt.Circle((x[5], y[5]), Saturnring_inner, color='black', zorder=1))
 
-            # calc and plot moon
-            ex = self.root.all_planets[2].x
-            ey = self.root.all_planets[2].y
-            mx = self.root.all_planets[8].x
-            my = self.root.all_planets[8].y
-            dist = np.sqrt((ex-mx)**2 + (ey-my)**2)
-            x[8] = x[2] + (mx-ex)/dist*Moon_orbit
-            y[8] = y[2] + (my-ey)/dist*Moon_orbit
-            self.ax.add_patch(plt.Circle((x[8], y[8]), Perihel_and_moon_size, color=[0.7, 0.7, 0.7]))
+            # plot moon
+            self.ax.add_patch(plt.Circle((x[2] + Moon_orbit * x[8], y[2] + Moon_orbit * y[8]), Perihel_and_moon_size, color=[0.7, 0.7, 0.7]))
 
 
-        ###### PLOT INNERE ######
-        elif self.root.button_view_on == 1:
+        ###### REAL DISTANCES VIEWS ######
+        elif self.root.button_view_on >= 1 and self.root.button_view_on <= 5:
 
-            view_scale = 4.8
+            if self.root.button_view_on == 1:
+                view_scale = 4.8
+                planet_indices = [0,1,2,3]
+            elif self.root.button_view_on == 2:
+                view_scale = 1.5
+                planet_indices = [2,3,4]
+            elif self.root.button_view_on == 3:
+                view_scale = 0.8
+                planet_indices = [2,3,4,5]
+            elif self.root.button_view_on == 4:
+                view_scale = 0.4
+                planet_indices = [4,5,6]
+            elif self.root.button_view_on == 5:
+                view_scale = 0.25
+                planet_indices = [4,5,6,7]
 
-            for i in range(4):
+            for i in planet_indices:
 
                 # orbits
                 self.ax.plot(view_scale * self.ox[i], view_scale * self.oy[i], \
@@ -834,98 +838,43 @@ class Plotcanvas():
                                  color=[0.35, 0.35, 0.35], linewidth=Orbit_pol_lw, zorder=0)
                 
                 # perihels
-                dx = 0.22 * np.cos(self.plon[i] / 180 * np.pi)
-                dy = 0.22 * np.sin(self.plon[i] / 180 * np.pi)
                 self.ax.plot(\
                     [view_scale*self.px[i] - dx, view_scale*self.px[i]], \
                     [view_scale*self.py[i] - dy, view_scale*self.py[i]], \
                     color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
                 
                 # planets
-                x[i] = view_scale*self.root.all_planets[i].x
-                y[i] = view_scale*self.root.all_planets[i].y
-                self.ax.add_patch(plt.Circle((x[i], y[i]), planetsizes[i], color=planetcolors[i,:], zorder=2))
+                self.ax.add_patch(plt.Circle((view_scale * x[i], view_scale * y[i]), planetsizes[i], color=planetcolors[i,:], zorder=2))
 
             # plot sun
             self.ax.add_patch(plt.Circle((0, 0), Sun_size, color=[0.9, 0.8, 0], zorder=1))
 
-            # calc and plot moon
-            ex = self.root.all_planets[2].x
-            ey = self.root.all_planets[2].y
-            mx = self.root.all_planets[8].x
-            my = self.root.all_planets[8].y
-            dist = np.sqrt((ex-mx)**2 + (ey-my)**2)
-            x[8] = x[2] + (mx-ex)/dist*Moon_orbit
-            y[8] = y[2] + (my-ey)/dist*Moon_orbit
-            self.ax.add_patch(plt.Circle((x[8], y[8]), Perihel_and_moon_size, color=[0.7, 0.7, 0.7]))
-
-            # earthline
+            # plot earthline
             self.ax.plot([0, 15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, 15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], \
                          color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, zorder=0)
             self.ax.plot([0, -15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, -15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], \
                          color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, linestyle='--', zorder=0)
 
             # plot poles
-            for i in [2,3]:
-                dx = planetsizes[i] * np.cos(self.root.all_planets[i].pole / 180 * np.pi)
-                dy = planetsizes[i] * np.sin(self.root.all_planets[i].pole / 180 * np.pi)
-                self.ax.plot(\
-                    [x[i] + 0.1 * dx, x[i] + dx], \
-                    [y[i] + 0.1 * dy, y[i] + dy], \
-                    color='black', linewidth=Orbit_pol_lw, zorder=3)
+            for i in planet_indices:
+                if i in [2,3,5,6,7]:
+                    dx = planetsizes[i] * np.cos(self.root.all_planets[i].pole / 180 * np.pi)
+                    dy = planetsizes[i] * np.sin(self.root.all_planets[i].pole / 180 * np.pi)
+                    self.ax.plot(\
+                        [view_scale * x[i] + 0.1 * dx, view_scale * x[i] + dx], \
+                        [view_scale * y[i] + 0.1 * dy, view_scale * y[i] + dy], \
+                        color='black', linewidth=Orbit_pol_lw, zorder=3)
 
+            # plot moon
+            if 2 in planet_indices and max(planet_indices) < 4:
+                self.ax.add_patch(plt.Circle((view_scale * x[2] + Moon_orbit * x[8], view_scale * y[2] + Moon_orbit * y[8]), Perihel_and_moon_size, color=[0.7, 0.7, 0.7]))
 
-        ###### PLOT ÄUßERE ######
-        elif self.root.button_view_on == 2:
+            if 5 in planet_indices:
+                self.ax.add_patch(plt.Circle((view_scale * x[5], view_scale * y[5]), Saturnring_outer, color=planetcolors[5,:], zorder=1))
+                self.ax.add_patch(plt.Circle((view_scale * x[5], view_scale * y[5]), Saturnring_inner, color='black', zorder=1))
 
-            view_scale = 0.25
-
-            for i in range(4,8):
-
-                # orbits
-                self.ax.plot(view_scale * self.ox[i], view_scale * self.oy[i], \
-                             color=[0.25, 0.25, 0.25], linewidth=Orbit_pol_lw, zorder=0)
-                self.ax.plot(view_scale * select_larger_zero(self.ox[i], self.oz[i]), view_scale * select_larger_zero(self.oy[i], self.oz[i]), \
-                             color=[0.35, 0.35, 0.35], linewidth=Orbit_pol_lw, zorder=0)
-                
-                # perihels
-                dx = 0.22 * np.cos(self.plon[i] / 180 * np.pi)
-                dy = 0.22 * np.sin(self.plon[i] / 180 * np.pi)
-                self.ax.plot(\
-                    [view_scale*self.px[i] - dx, view_scale*self.px[i]], \
-                    [view_scale*self.py[i] - dy, view_scale*self.py[i]], \
-                    color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
-                
-                # planets
-                x[i] = view_scale*self.root.all_planets[i].x
-                y[i] = view_scale*self.root.all_planets[i].y
-                self.ax.add_patch(plt.Circle((x[i], y[i]), planetsizes[i], color=planetcolors[i,:], zorder=2))
-
-            # plot sun and saturn rings
-            self.ax.add_patch(plt.Circle((0, 0), Sun_size, color=[0.9, 0.8, 0], zorder=1))
-            self.ax.add_patch(plt.Circle((x[5], y[5]), Saturnring_outer, color=planetcolors[5,:], zorder=1))
-            self.ax.add_patch(plt.Circle((x[5], y[5]), Saturnring_inner, color='black', zorder=1))
-
-            # earthline
-            x[2] = view_scale*self.root.all_planets[2].x
-            y[2] = view_scale*self.root.all_planets[2].y
-            self.ax.plot([0, 15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, 15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], \
-                         color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, zorder=0)
-            self.ax.plot([0, -15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, -15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], \
-                         color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, linestyle='--', zorder=0)
-
-            # plot poles
-            for i in [5,6,7]:
-                dx = planetsizes[i] * np.cos(self.root.all_planets[i].pole / 180 * np.pi)
-                dy = planetsizes[i] * np.sin(self.root.all_planets[i].pole / 180 * np.pi)
-                self.ax.plot(\
-                    [x[i] + 0.1 * dx, x[i] + dx], \
-                    [y[i] + 0.1 * dy, y[i] + dy], \
-                    color='black', linewidth=Orbit_pol_lw, zorder=3)
-
-
-        ###### PLOT EARTH-MOON ######
-        elif self.root.button_view_on == 3:
+        ###### EARTH-MOON VIEW ######
+        else:
                 
             view_scale = 2000
 
@@ -934,19 +883,13 @@ class Plotcanvas():
                          color=[0.25, 0.25, 0.25], linewidth=Orbit_pol_lw, zorder=0)
 
             # planets
-            x[2] = 0
-            y[2] = 0
-            x[8] = view_scale*(self.root.all_planets[8].x - self.root.all_planets[2].x)
-            y[8] = view_scale*(self.root.all_planets[8].y - self.root.all_planets[2].y)
-            self.ax.add_patch(plt.Circle((x[2], y[2]), planetsizes[2], color=planetcolors[2,:], zorder=1))
-            self.ax.add_patch(plt.Circle((x[8], y[8]), Perihel_and_moon_size, color=[0.7, 0.7, 0.7], zorder=2))
+            self.ax.add_patch(plt.Circle((0, 0), planetsizes[2], color=planetcolors[2,:], zorder=1))
+            self.ax.add_patch(plt.Circle((view_scale * x[8], view_scale * y[8]), Perihel_and_moon_size, color=[0.7, 0.7, 0.7], zorder=2))
 
             # earthline
-            x[2] = -view_scale*self.root.all_planets[2].x
-            y[2] = -view_scale*self.root.all_planets[2].y
-            self.ax.plot([0, 15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, 15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], \
-                         color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, zorder=0)
             self.ax.plot([0, -15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, -15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], \
+                         color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, zorder=0)
+            self.ax.plot([0, 15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, 15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], \
                          color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, linestyle='--', zorder=0)
 
 
