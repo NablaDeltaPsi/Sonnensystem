@@ -778,8 +778,6 @@ class Plotcanvas():
         y = np.zeros(len(self.root.all_planets))
         
         for i in range(9):
-            dx = 0.22 * np.cos(self.plon[i] / 180 * np.pi)
-            dy = 0.22 * np.sin(self.plon[i] / 180 * np.pi)
             x[i] = self.root.all_planets[i].x
             y[i] = self.root.all_planets[i].y
 
@@ -838,8 +836,8 @@ class Plotcanvas():
                 
                 # perihels
                 self.ax.plot(\
-                    [view_scale*self.px[i] - dx, view_scale*self.px[i]], \
-                    [view_scale*self.py[i] - dy, view_scale*self.py[i]], \
+                    [view_scale * self.px[i] - 0.3 * self.px[i] / np.sqrt(self.px[i]**2 + self.py[i]**2), view_scale * self.px[i]], \
+                    [view_scale * self.py[i] - 0.3 * self.py[i] / np.sqrt(self.px[i]**2 + self.py[i]**2), view_scale * self.py[i]], \
                     color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
                 
                 # planets
