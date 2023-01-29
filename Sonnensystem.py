@@ -1,5 +1,5 @@
 
-global GUI_version; GUI_version = '2.2'
+global GUI_version; GUI_version = '2.3'
 
 import tkinter as tk
 import tkinter.font
@@ -15,6 +15,9 @@ import ctypes
 import astropy as ap
 import astropy.coordinates as apc
 mpl.use('TkCairo')
+
+import warnings
+warnings.filterwarnings("ignore")
 
 def blanks(number):
     string = ""
@@ -126,6 +129,7 @@ class NewGUI():
         self.root.bind('<h>',  self.replot_today)
         self.root.bind('<j>',  self.replot_2000)
         self.root.bind("<MouseWheel>", self.replot_mouse_wheel)
+        self.root.bind('<m>',  self.replot_next_min)
         #self.root.bind("<KeyPress-Right>", self.replot_step)
         #self.root.bind("<KeyRelease-Right>", self.replot_stop)
 
@@ -292,6 +296,14 @@ class NewGUI():
         #self.plot_window.calc_orbits()
         self.root.mainloop()
 
+    def replot(self, *args):
+        self.set_date_planets()
+        self.plot_window.clear()
+        self.plot_window.plot()
+        self.update_selection()
+        self.root.update_idletasks()
+        time.sleep(0.01)
+
     def set_date_planets(self):
         d = int(self.entry_1.get())
         m = int(self.entry_2.get())
@@ -300,37 +312,121 @@ class NewGUI():
         for i in range(len(self.all_planets)):
             self.all_planets[i].set_date(dt.datetime(y, m, d, 12, 0, 0))
 
-        # DISPLAY IN ROOT WINDOW
         for i in range(len(self.all_planets)):
-
-            # Position Erde
-            [x0_earth, y0_earth] = pol2cart(self.all_planets[2].rad, self.all_planets[2].lon)
-            [x0_this, y0_this] = pol2cart(self.all_planets[i].rad, self.all_planets[i].lon)
-            x1_this = x0_this - x0_earth # Erde-Planet
-            y1_this = y0_this - y0_earth
-            x2_this = -x0_earth # Erde-Sonne
-            y2_this = -y0_earth
-            length_1_this = np.sqrt(x1_this**2 + y1_this**2)
-            length_2_this = np.sqrt(x2_this**2 + y2_this**2)
-            if i==2:
-                # Erde-Planet führt für Erde zur Division durch null
-                # deshalb dummy
-                length_1_this = 1
-            this_elongation = 180/np.pi*np.arccos( \
-              (x1_this*x2_this + y1_this*y2_this) / \
-              (length_1_this * length_2_this))
-              
-            # für Erde mach Elongation keinen Sinn
-            if i==2:
-                this_elongation = 0
-
             if self.dropdown_elongation_var.get()==self.all_planets[i].name_de:
                 self.elongation_text.set( \
-                  "  E={:.1f}°".format(this_elongation) + \
+                  "  E={:.1f}°".format(self.calc_elongation(i)) + \
                   "  Lon={:.1f}°".format(self.all_planets[i].lon) + \
                   "  Lat={:.1f}°".format(self.all_planets[i].lat) \
                   )
 
+    def calc_elongation(self, planet_index, *args):
+        # für Erde mach Elongation keinen Sinn
+        if planet_index==2:
+            return 0
+        else:
+            [x1, y1] = pol2cart(self.all_planets[2].rad, self.all_planets[2].lon)
+            [x2, y2] = pol2cart(self.all_planets[planet_index].rad, self.all_planets[planet_index].lon)
+            x2 = x2 - x1 # Erde-Planet
+            y2 = y2 - y1
+            x1 = -x1 # Erde-Sonne
+            y1 = -y1
+            length_1 = np.sqrt(x1**2 + y1**2)
+            length_2 = np.sqrt(x2**2 + y2**2)
+            return 180/np.pi * np.arccos((x1*x2 + y1*y2) / (length_1 * length_2))
+
+    def replot_next_min(self, *args):
+        d = int(self.entry_1.get())
+        m = int(self.entry_2.get())
+        y = int(self.entry_3.get())
+        Datum_aktuell = dt.date(y, m, d)
+        counter = 0
+        for i in range(len(self.all_planets)):
+            if self.dropdown_elongation_var.get()==self.all_planets[i].name_de:
+                if i==2:
+                    return
+                old_elong = self.calc_elongation(i)
+                old_elong_diff = 0
+                timedelta = 0
+                daydiff = 0
+                old_daydiff = 0
+                while True:
+                    new_date = Datum_aktuell + dt.timedelta(timedelta)
+                    self.all_planets[2].set_date(dt.datetime(new_date.year, new_date.month, new_date.day, 12, 0, 0))
+                    self.all_planets[i].set_date(dt.datetime(new_date.year, new_date.month, new_date.day, 12, 0, 0))
+                    new_elong = self.calc_elongation(i)
+                    new_elong_diff = new_elong - old_elong
+                    if timedelta > 1 and daydiff == 1 and old_daydiff == 1: # mindestens zwei ein-Tages-Schritte vollzogen
+                        if i < 2:
+                            if not np.sign(new_elong_diff) == np.sign(old_elong_diff) and new_elong > 15:
+                                new_date = Datum_aktuell + dt.timedelta(timedelta-1)
+                                self.replot_date(new_date.day, new_date.month, new_date.year)
+                                print("Found elongation after " + str(counter) + " steps.")
+                                return
+                        if i > 2:
+                            if not np.sign(new_elong_diff) == np.sign(old_elong_diff) and new_elong > 170:
+                                new_date = Datum_aktuell + dt.timedelta(timedelta-1)
+                                self.replot_date(new_date.day, new_date.month, new_date.year)
+                                print("Found elongation after " + str(counter) + " steps.")
+                                return
+                    if timedelta > 1e4:
+                        print("Did not find elongation after " + str(counter) + " steps.")
+                        return                        
+                    old_elong = new_elong
+                    old_elong_diff = new_elong_diff
+                    if i > 2:
+                        if new_elong_diff < 0:
+                            # Nimmt die Elongation noch ab kann man schneller springen
+                            daydiff = 30
+                        else:
+                            # Nimmt die Elongation zu muss man umso langsamer werden je näher an 180
+                            daydiff = int(abs(new_elong - 180) / 2) + 1
+                    elif i == 1:
+                        if new_elong > 2 and new_elong_diff < 0 and daydiff == 1:
+                            # Nimmt die Elongation nach Abendsicht wieder ab (die Venus ist uns noch hinterher) dauert es etwas mehr als einen halben Venus-Umlauf bis zur Morgensicht
+                            # Nimmt die Elongation nach Morgensicht wieder ab (die Venus ist uns voraus) dauert es ziemlich genau zwei Venus-Umläufe bis zur Abendsicht
+                            planet_lon = self.all_planets[i].lon
+                            earth_lon = self.all_planets[2].lon
+                            if earth_lon < 180:
+                                if planet_lon > earth_lon and planet_lon < earth_lon + 180:
+                                    daydiff = int(225 * 1.5)
+                                else:
+                                    daydiff = int(225 * 0.4)
+                            else:
+                                if planet_lon > earth_lon or planet_lon < earth_lon - 180:
+                                    daydiff = int(225 * 1.5)
+                                else:
+                                    daydiff = int(225 * 0.4)
+                        elif new_elong < 40:
+                            daydiff = 5
+                        else:
+                            daydiff = 1
+                    elif i == 0:
+                        if new_elong > 2 and new_elong_diff < 0 and daydiff == 1:
+                            # Nimmt die Elongation nach Abendsicht wieder ab (der Merkur ist uns noch hinterher) dauert es ziemlich genau einen halben Merkur-Umlauf bis zur Morgensicht
+                            # Nimmt die Elongation nach Morgensicht wieder ab (der Merkur ist uns voraus) dauert es ungefähr einen dreiviertel Merkur-Umlauf bis zur Abendsicht
+                            planet_lon = self.all_planets[i].lon
+                            earth_lon = self.all_planets[2].lon
+                            if earth_lon < 180:
+                                if planet_lon > earth_lon and planet_lon < earth_lon + 180:
+                                    daydiff = int(88 * 0.4)
+                                else:
+                                    daydiff = int(88 * 0.2)
+                            else:
+                                if planet_lon > earth_lon or planet_lon < earth_lon - 180:
+                                    daydiff = int(88 * 0.4)
+                                else:
+                                    daydiff = int(88 * 0.2)
+                        elif new_elong < 15:
+                            daydiff = 3
+                        else:
+                            daydiff = 1
+                    else:
+                        daydiff = 1
+                    timedelta += daydiff
+                    old_daydiff = daydiff
+                    counter += 1                
+                
     def replot_date(self, d, m, y, *args):
         self.dropdown_special_var.set(self.special_dates[0])
         self.entry_1.delete(0, 'end')
@@ -539,14 +635,6 @@ class NewGUI():
                 self.replot_day_p()
             if event.num == 4 or event.delta == 120:
                 self.replot_day_m()
-
-    def replot(self, *args):
-        self.set_date_planets()
-        self.plot_window.clear()
-        self.plot_window.plot()
-        self.update_selection()
-        self.root.update_idletasks()
-        time.sleep(0.01)
 
     def update_selection(self, *args):
         d = int(self.entry_1.get())
