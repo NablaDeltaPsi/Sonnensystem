@@ -1,5 +1,5 @@
 
-global GUI_version; GUI_version = '2.3'
+global GUI_version; GUI_version = '3.0'
 
 import tkinter as tk
 import tkinter.font
@@ -15,9 +15,6 @@ import ctypes
 import astropy as ap
 import astropy.coordinates as apc
 mpl.use('TkCairo')
-
-import warnings
-warnings.filterwarnings("ignore")
 
 def blanks(number):
     string = ""
@@ -87,7 +84,7 @@ class NewGUI():
         self.guisize = guisize
         self.fontsize = fontsize
         self.root = tk.Tk()
-        self.root.title("Sonnensystem")
+        self.root.title("Sonnensystem (v" + GUI_version + ")")
         self.root.resizable(False, False)
         self.root.configure(background='black')
         self.output = True
@@ -167,6 +164,16 @@ class NewGUI():
         h1 = pts(1.5*self.fontsize)
         h2 = pts(1.5*self.fontsize/2)
 
+        self.button_view = tk.Button(self.root, text="O", command=self.switch_view)
+        self.button_view.place(relx=1, x=pts('-', 4*width_vw), y=0, height=h1, width=pts(width_vw), anchor='ne')
+        self.button_view_on = 0
+
+        self.button_elong = tk.Button(self.root, text="E", command=self.replot_elongation_p)
+        self.button_elong.place(relx=1, x=pts('-', 5*width_vw), y=0, height=h1, width=pts(width_vw), anchor='ne')
+
+        self.button_today = tk.Button(self.root, text="H", command=self.replot_today)
+        self.button_today.place(relx=1, x=pts('-', 6*width_vw), y=0, height=h1, width=pts(width_vw), anchor='ne')
+
         self.entry_1 = tk.Entry(self.root, justify='center')
         self.entry_1.place(x=x1, y=0, height=h1, width=pts(width_dm), anchor='nw')
         self.entry_1.insert("0",str(mydate.day))
@@ -211,37 +218,6 @@ class NewGUI():
 
         self.button_replot_ym = tk.Button(self.root, text="-", command=self.replot_year_m)
         self.button_replot_ym.place(x=x6, y=h2, height=h2, width=pts(width_pm), anchor='nw')
-
-        if os.path.isfile("Sonnensystem_Daten.txt"):
-            with open("Sonnensystem_Daten.txt", "r") as myfile:
-                all_lines_read = myfile.readlines()
-            self.special_dates = []
-            for i in range(len(all_lines_read)):
-                all_lines_read[i] = all_lines_read[i].rstrip("\n")
-                if (    all_lines_read[i][0:2].isdigit() and
-                        all_lines_read[i][2] == '.'      and
-                        all_lines_read[i][3:5].isdigit() and 
-                        all_lines_read[i][5] == '.'      and
-                        all_lines_read[i][6:10].isdigit()  ):
-                    self.special_dates.append(all_lines_read[i])
-        else:
-            self.special_dates = []
-        self.special_dates.insert(0, dt.date.today().strftime("%d.%m.%Y") + ' Heute')
-        self.special_dates.insert(0, '(Version ' + GUI_version + ')')
-
-        self.dropdown_special_var = tk.StringVar(self.root)
-        self.dropdown_special_var.set(self.special_dates[0])
-        self.dropdown_special = tk.OptionMenu(self.root, self.dropdown_special_var, *self.special_dates, command=self.replot_selection)
-        self.dropdown_special.place(x=x7, y=0, height=h1, width=pts(width_sl), anchor='nw')
-        self.dropdown_special["highlightthickness"]=0
-        self.dropdown_special["fg"]=self.dropdown_special["bg"]
-        self.dropdown_special["activeforeground"]=self.dropdown_special["activebackground"]
-        self.dropdown_special['menu'].config(bg="#000000")
-        self.dropdown_special['menu'].config(fg="#ffffff")
-
-        self.button_view = tk.Button(self.root, text="O", command=self.switch_view)
-        self.button_view.place(relx=1, x=pts('-', 4*width_vw), y=0, height=h1, width=pts(width_vw), anchor='ne')
-        self.button_view_on = 0
 
         self.button_fontsize_p = tk.Button(self.root, text="S+", command=self.new_fontlarger)
         self.button_fontsize_p.place(relx=1, x=pts('-', 3*width_vw), y=0, height=h1, width=pts(width_vw), anchor='ne')
@@ -301,7 +277,6 @@ class NewGUI():
         self.set_date_planets()
         self.plot_window.clear()
         self.plot_window.plot()
-        self.update_selection()
         self.root.update_idletasks()
         time.sleep(0.01)
 
@@ -450,7 +425,6 @@ class NewGUI():
                     counter += 1                
                 
     def replot_date(self, d, m, y, *args):
-        self.dropdown_special_var.set(self.special_dates[0])
         self.entry_1.delete(0, 'end')
         self.entry_2.delete(0, 'end')
         self.entry_3.delete(0, 'end')
@@ -460,7 +434,6 @@ class NewGUI():
         self.replot()
 
     def replot_today(self, *args):
-        self.dropdown_special_var.set(self.special_dates[0])
         new_date = dt.date.today()
         self.entry_1.delete(0, 'end')
         self.entry_2.delete(0, 'end')
@@ -471,7 +444,6 @@ class NewGUI():
         self.replot()
 
     def replot_2000(self, *args):
-        self.dropdown_special_var.set(self.special_dates[0])
         new_date = dt.date.today()
         self.entry_1.delete(0, 'end')
         self.entry_2.delete(0, 'end')
@@ -479,20 +451,6 @@ class NewGUI():
         self.entry_1.insert("0","1")
         self.entry_2.insert("0","1")
         self.entry_3.insert("0","2000")
-        self.replot()
-
-    def replot_selection(self, *args):
-        slct = self.dropdown_special_var.get()
-        if slct == '(Version ' + GUI_version + ')':
-            self.replot_today()
-            return
-        new_date = dt.date(int(slct[6:10]), int(slct[3:5]), int(slct[0:2]))
-        self.entry_1.delete(0, 'end')
-        self.entry_2.delete(0, 'end')
-        self.entry_3.delete(0, 'end')
-        self.entry_1.insert("0",str(new_date.day))
-        self.entry_2.insert("0",str(new_date.month))
-        self.entry_3.insert("0",str(new_date.year))
         self.replot()
 
     def switch_view(self, *event):
@@ -657,17 +615,6 @@ class NewGUI():
                 self.replot_day_p()
             if event.num == 4 or event.delta == 120:
                 self.replot_day_m()
-
-    def update_selection(self, *args):
-        d = int(self.entry_1.get())
-        m = int(self.entry_2.get())
-        y = int(self.entry_3.get())
-        self.dropdown_special_var.set(self.special_dates[0])
-        self.selection_text.set("")
-        for i in range(1,len(self.special_dates)):
-            if int(self.special_dates[i][0:2])==d and int(self.special_dates[i][3:5])==m and int(self.special_dates[i][6:10])==y:
-                self.dropdown_special_var.set(self.special_dates[i])
-                self.selection_text.set(self.special_dates[i][11:len(self.special_dates[i])])
         
     def switch_elongation_selection(self, *args):
         if self.dropdown_elongation_var.get()==self.elongation_select[len(self.elongation_select)-1]:
