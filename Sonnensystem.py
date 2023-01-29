@@ -129,7 +129,8 @@ class NewGUI():
         self.root.bind('<h>',  self.replot_today)
         self.root.bind('<j>',  self.replot_2000)
         self.root.bind("<MouseWheel>", self.replot_mouse_wheel)
-        self.root.bind('<m>',  self.replot_next_min)
+        self.root.bind('<e>',  self.replot_elongation_p)
+        self.root.bind('<Control-e>',  self.replot_elongation_m)
         #self.root.bind("<KeyPress-Right>", self.replot_step)
         #self.root.bind("<KeyRelease-Right>", self.replot_stop)
 
@@ -334,8 +335,14 @@ class NewGUI():
             length_1 = np.sqrt(x1**2 + y1**2)
             length_2 = np.sqrt(x2**2 + y2**2)
             return 180/np.pi * np.arccos((x1*x2 + y1*y2) / (length_1 * length_2))
+    
+    def replot_elongation_p(self, *args):
+        self.replot_elongation(1)
 
-    def replot_next_min(self, *args):
+    def replot_elongation_m(self, *args):
+        self.replot_elongation(-1)
+
+    def replot_elongation(self, timedir, *args):
         d = int(self.entry_1.get())
         m = int(self.entry_2.get())
         y = int(self.entry_3.get())
@@ -356,16 +363,16 @@ class NewGUI():
                     self.all_planets[i].set_date(dt.datetime(new_date.year, new_date.month, new_date.day, 12, 0, 0))
                     new_elong = self.calc_elongation(i)
                     new_elong_diff = new_elong - old_elong
-                    if timedelta > 1 and daydiff == 1 and old_daydiff == 1: # mindestens zwei ein-Tages-Schritte vollzogen
+                    if abs(timedelta) > 1 and daydiff == 1 and old_daydiff == 1: # mindestens zwei ein-Tages-Schritte vollzogen
                         if i < 2:
                             if not np.sign(new_elong_diff) == np.sign(old_elong_diff) and new_elong > 15:
-                                new_date = Datum_aktuell + dt.timedelta(timedelta-1)
+                                new_date = Datum_aktuell + dt.timedelta(timedelta-timedir/abs(timedir))
                                 self.replot_date(new_date.day, new_date.month, new_date.year)
                                 print("Found elongation after " + str(counter) + " steps.")
                                 return
                         if i > 2:
                             if not np.sign(new_elong_diff) == np.sign(old_elong_diff) and new_elong > 170:
-                                new_date = Datum_aktuell + dt.timedelta(timedelta-1)
+                                new_date = Datum_aktuell + dt.timedelta(timedelta-timedir/abs(timedir))
                                 self.replot_date(new_date.day, new_date.month, new_date.year)
                                 print("Found elongation after " + str(counter) + " steps.")
                                 return
@@ -385,18 +392,24 @@ class NewGUI():
                         if new_elong > 2 and new_elong_diff < 0 and daydiff == 1:
                             # Nimmt die Elongation nach Abendsicht wieder ab (die Venus ist uns noch hinterher) dauert es etwas mehr als einen halben Venus-Umlauf bis zur Morgensicht
                             # Nimmt die Elongation nach Morgensicht wieder ab (die Venus ist uns voraus) dauert es ziemlich genau zwei Venus-Umläufe bis zur Abendsicht
+                            if timedir > 0:
+                                jumpfac_1 = 1.5
+                                jumpfac_2 = 0.4
+                            else:
+                                jumpfac_1 = 0.4
+                                jumpfac_2 = 1.5
                             planet_lon = self.all_planets[i].lon
                             earth_lon = self.all_planets[2].lon
                             if earth_lon < 180:
                                 if planet_lon > earth_lon and planet_lon < earth_lon + 180:
-                                    daydiff = int(225 * 1.5)
+                                    daydiff = int(225 * jumpfac_1)
                                 else:
-                                    daydiff = int(225 * 0.4)
+                                    daydiff = int(225 * jumpfac_2)
                             else:
                                 if planet_lon > earth_lon or planet_lon < earth_lon - 180:
-                                    daydiff = int(225 * 1.5)
+                                    daydiff = int(225 * jumpfac_1)
                                 else:
-                                    daydiff = int(225 * 0.4)
+                                    daydiff = int(225 * jumpfac_2)
                         elif new_elong < 40:
                             daydiff = 5
                         else:
@@ -405,25 +418,34 @@ class NewGUI():
                         if new_elong > 2 and new_elong_diff < 0 and daydiff == 1:
                             # Nimmt die Elongation nach Abendsicht wieder ab (der Merkur ist uns noch hinterher) dauert es ziemlich genau einen halben Merkur-Umlauf bis zur Morgensicht
                             # Nimmt die Elongation nach Morgensicht wieder ab (der Merkur ist uns voraus) dauert es ungefähr einen dreiviertel Merkur-Umlauf bis zur Abendsicht
+                            if timedir > 0:
+                                jumpfac_1 = 0.4
+                                jumpfac_2 = 0.2
+                            else:
+                                jumpfac_1 = 0.2
+                                jumpfac_2 = 0.4
                             planet_lon = self.all_planets[i].lon
                             earth_lon = self.all_planets[2].lon
                             if earth_lon < 180:
                                 if planet_lon > earth_lon and planet_lon < earth_lon + 180:
-                                    daydiff = int(88 * 0.4)
+                                    daydiff = int(88 * jumpfac_1)
                                 else:
-                                    daydiff = int(88 * 0.2)
+                                    daydiff = int(88 * jumpfac_2)
                             else:
                                 if planet_lon > earth_lon or planet_lon < earth_lon - 180:
-                                    daydiff = int(88 * 0.4)
+                                    daydiff = int(88 * jumpfac_1)
                                 else:
-                                    daydiff = int(88 * 0.2)
+                                    daydiff = int(88 * jumpfac_2)
                         elif new_elong < 15:
                             daydiff = 3
                         else:
                             daydiff = 1
                     else:
                         daydiff = 1
-                    timedelta += daydiff
+                    if timedir > 0:
+                        timedelta += daydiff
+                    else:
+                        timedelta -= daydiff
                     old_daydiff = daydiff
                     counter += 1                
                 
