@@ -849,6 +849,7 @@ class Plotcanvas():
         px = np.zeros(9)
         py = np.zeros(9)
         pd = np.zeros(9)
+        pole = np.zeros(9)
         if self.root.view_mode == 0:
             for i in range(8):
                 [x[i], y[i]] = pol2cart(i+1, self.root.all_planets[i].lon)
@@ -864,6 +865,7 @@ class Plotcanvas():
                 px[i] = self.px[i]
                 py[i] = self.py[i]
                 pd[i] = np.sqrt(px[i]**2 + py[i]**2)
+                pole[i] = self.root.all_planets[i].pole
         x[8] = self.root.all_planets[8].x - self.root.all_planets[2].x
         y[8] = self.root.all_planets[8].y - self.root.all_planets[2].y
 
@@ -919,6 +921,7 @@ class Plotcanvas():
                     oy_ = ox[i][n] * np.sin(rot_angle) + oy[i][n] * np.cos(rot_angle)
                     ox[i][n] = ox_
                     oy[i][n] = oy_
+                pole[i] = pole[i] - self.root.all_planets[2].lon
 
         ###### EQUIDISTANT VIEW ######
         if self.root.view_mode == 0:
@@ -963,8 +966,8 @@ class Plotcanvas():
             # plot poles
             for i in planet_indices:
                 if i in [2,3,5,6,7]:
-                    dx = planetsizes[i] * np.cos(self.root.all_planets[i].pole / 180 * np.pi)
-                    dy = planetsizes[i] * np.sin(self.root.all_planets[i].pole / 180 * np.pi)
+                    dx = planetsizes[i] * np.cos(pole[i] / 180 * np.pi)
+                    dy = planetsizes[i] * np.sin(pole[i] / 180 * np.pi)
                     self.ax.plot(\
                         [x[i] + 0.1 * dx, x[i] + dx], \
                         [y[i] + 0.1 * dy, y[i] + dy], \
