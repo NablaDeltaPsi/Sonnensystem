@@ -1,5 +1,5 @@
 
-global GUI_version; GUI_version = '3.0'
+global GUI_version; GUI_version = '3.1'
 
 import tkinter as tk
 import tkinter.font
@@ -91,6 +91,8 @@ class NewGUI():
         self.repeat_time = 20
         self.repeat_on = True
         self.repeat_count = 0
+        self.view_mode = 0
+        self.fix_earth = 0
 
         # get fontsize
         default_font = tk.font.nametofont("TkDefaultFont")
@@ -128,6 +130,7 @@ class NewGUI():
         self.root.bind("<MouseWheel>", self.replot_mouse_wheel)
         self.root.bind('<e>',  self.replot_elongation_p)
         self.root.bind('<Control-e>',  self.replot_elongation_m)
+        self.root.bind('<f>',  self.switch_fix_earth)
         #self.root.bind("<KeyPress-Right>", self.replot_step)
         #self.root.bind("<KeyRelease-Right>", self.replot_stop)
 
@@ -166,7 +169,6 @@ class NewGUI():
 
         self.button_view = tk.Button(self.root, text="O", command=self.switch_view)
         self.button_view.place(relx=1, x=pts('-', 4*width_vw), y=0, height=h1, width=pts(width_vw), anchor='ne')
-        self.button_view_on = 0
 
         self.button_elong = tk.Button(self.root, text="E", command=self.replot_elongation_p)
         self.button_elong.place(relx=1, x=pts('-', 5*width_vw), y=0, height=h1, width=pts(width_vw), anchor='ne')
@@ -454,13 +456,17 @@ class NewGUI():
         self.replot()
 
     def switch_view(self, *event):
-        self.button_view_on = (self.button_view_on + 1) % 7
+        self.view_mode = (self.view_mode + 1) % 7
         self.replot()
 
     def switch_view_rev(self, *event):
-        self.button_view_on = (self.button_view_on - 1 + 7) % 7
+        self.view_mode = (self.view_mode - 1 + 7) % 7
         self.replot()
-    
+
+    def switch_fix_earth(self, *event):
+        self.fix_earth = (self.fix_earth + 1) % 2
+        self.replot()
+
     def replot_p(self, *args):
         current_focus = self.root.focus_get()
         if not (current_focus == self.entry_1 or current_focus == self.entry_2 or current_focus == self.entry_3):
@@ -727,7 +733,6 @@ class NewGUI():
 # ----------------------------------------------
 class Plotcanvas():
     def __init__(self, root, size):
-        self.current_mode = 0
         self.root = root
         self.fig = mpl.figure.Figure(size, constrained_layout=True)
         self.fig.patch.set_facecolor('#000000')
@@ -844,11 +849,11 @@ class Plotcanvas():
         y[8] = y[8]-y[2]
 
         ###### EQUIDISTANT VIEW ######
-        if self.root.button_view_on == 0:
+        if self.root.view_mode == 0:
 
             # calc and plot planet positions and orbits
             for i in range(8):
-                [x[i], y[i]] = pol2cart(i+1, self.root.all_planets[i].lon)
+                [x[i], y[i]] = pol2cart(i+1, self.root.all_planets[i].lon - self.root.fix_earth * self.root.all_planets[2].lon)
                 phi = np.arange(0, 360.1, 1)
                 [ox, oy] = pol2cart(i+1, phi)
                 self.ax.plot(ox, oy, color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
@@ -864,21 +869,21 @@ class Plotcanvas():
 
 
         ###### REAL DISTANCES VIEWS ######
-        elif self.root.button_view_on >= 1 and self.root.button_view_on <= 5:
+        elif self.root.view_mode >= 1 and self.root.view_mode <= 5:
 
-            if self.root.button_view_on == 1:
+            if self.root.view_mode == 1:
                 view_scale = 4.8
                 planet_indices = [0,1,2,3]
-            elif self.root.button_view_on == 2:
+            elif self.root.view_mode == 2:
                 view_scale = 1.5
                 planet_indices = [2,3,4]
-            elif self.root.button_view_on == 3:
+            elif self.root.view_mode == 3:
                 view_scale = 0.8
                 planet_indices = [2,3,4,5]
-            elif self.root.button_view_on == 4:
+            elif self.root.view_mode == 4:
                 view_scale = 0.4
                 planet_indices = [4,5,6]
-            elif self.root.button_view_on == 5:
+            elif self.root.view_mode == 5:
                 view_scale = 0.25
                 planet_indices = [4,5,6,7]
 
@@ -952,7 +957,6 @@ class Plotcanvas():
         self.ax.set_xlim(8.5*np.array([-1, 1]))
         self.ax.set_ylim(8.5*np.array([-1, 1]))
         
-        self.current_mode = 2
         self.ax.axis('off')
         
         self.canvas.draw()
