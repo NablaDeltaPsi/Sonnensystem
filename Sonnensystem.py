@@ -16,6 +16,9 @@ import astropy as ap
 import astropy.coordinates as apc
 mpl.use('TkCairo')
 
+import warnings
+warnings.filterwarnings("ignore")
+
 def blanks(number):
     string = ""
     for i in range(number):
@@ -146,7 +149,7 @@ class NewGUI():
         self.all_planets.append(Planet(self, 'saturn',  'Saturn',  10755.70,   78,   9.53707,  0.05415,  92.43194,  113.71504 ))
         self.all_planets.append(Planet(self, 'uranus',  'Uranus',  30687.15,   78,  19.19126,  0.04716, 170.96424,   74.22988 ))
         self.all_planets.append(Planet(self, 'neptune', 'Neptun',  60190.03,  327,  30.06896,  0.00858,  44.97135,  131.72169 ))
-        self.all_planets.append(Planet(self, 'moon', 'Erdmond', 0, 0, 0.00257, 0, 0, 0 ))
+        self.all_planets.append(Planet(self, 'moon', 'Erdmond', 27.3217, 0, 0.00257, 0, 0, 0 ))
 
         mydate = dt.date.today()
         width_dm = 1.5*self.fontsize
@@ -742,90 +745,13 @@ class Plotcanvas():
         self.ax = self.fig.add_subplot(111)
         self.canvas = tkcairo.FigureCanvasTkCairo(self.fig, master=root.plot_frame)
         self.canvas.get_tk_widget().pack()
-        self.plat  = np.zeros(9)
-        self.plon  = np.zeros(9)
-        self.pdist = np.zeros(9)
-        self.px = np.zeros(9)
-        self.py = np.zeros(9)
-        self.pz = np.zeros(9)
-        self.olat = []
-        self.olon = []
-        self.odist = []
-        self.ox = []
-        self.oy = []
-        self.oz = []
-        nr_steps = 200
-        for i in range(9):
-            self.plon[i] = self.root.all_planets[i].perihel
-            self.pdist[i] = self.root.all_planets[i].periheldist
-            [self.px[i], self.py[i]] = pol2cart(self.pdist[i], self.plon[i])
-            self.olat.append(np.zeros(nr_steps))
-            self.olon.append(np.zeros(nr_steps))
-            self.odist.append(np.zeros(nr_steps))
-            self.ox.append(np.zeros(nr_steps))
-            self.oy.append(np.zeros(nr_steps))
-            self.oz.append(np.zeros(nr_steps))
-            for n in range(nr_steps):
-                self.olat[i][n] = 0
-                self.olon[i][n] = n/(nr_steps-1) * 360 + self.root.all_planets[i].perihel + 180
-                self.odist[i][n] = self.root.all_planets[i].p / (1 - self.root.all_planets[i].excen * np.cos(n/(nr_steps-1) * 2*np.pi))
-                [self.ox[i][n], self.oy[i][n]] = pol2cart(self.odist[i][n], self.olon[i][n])
-                self.oz[i][n] = np.sin(np.pi/180*(self.olon[i][n] - self.root.all_planets[i].aufstkn))
-
-    def calc_orbits(self):
-
-        # Not Finished
-
-        self.olat = []
-        self.olon = []
-        self.odist = []
-        self.ox = []
-        self.oy = []
-        self.oz = []
-        for i in range(9):
-            nr_steps = 40
-            self.olat.append(np.zeros(2*nr_steps))
-            self.olon.append(np.zeros(2*nr_steps))
-            self.odist.append(np.zeros(2*nr_steps))
-            self.ox.append(np.zeros(2*nr_steps))
-            self.oy.append(np.zeros(2*nr_steps))
-            self.oz.append(np.zeros(2*nr_steps))
-            step = self.root.all_planets[i].period / (2*nr_steps-1)
-            original_date = dt.datetime(2000,1,1,12,0,0)
-            for n in range(2*nr_steps):
-                self.root.all_planets[i].set_date(original_date + dt.timedelta((-nr_steps+n)*step))
-                self.olat[i][n] = self.root.all_planets[i].lat
-                self.olon[i][n] = self.root.all_planets[i].lon
-                self.odist[i][n] = self.root.all_planets[i].rad
-                self.ox[i][n] = self.root.all_planets[i].x
-                self.oy[i][n] = self.root.all_planets[i].y
-                self.oz[i][n] = self.root.all_planets[i].z
-
-            # determine perihel positions
-            ind = np.argmin(self.odist[i][n])
-            close_perihel_distances = np.zeros(2*nr_steps)
-            close_perihel_date = original_date + dt.timedelta((-nr_steps+ind)*step)
-            step = 2*step / (2*nr_steps-1)
-            for n in range(2*nr_steps):
-                self.root.all_planets[i].set_date(close_perihel_date + dt.timedelta((-nr_steps+n)*step))
-                close_perihel_distances[n] = self.root.all_planets[i].rad
-            ind = np.argmin(close_perihel_distances[n])
-            close_perihel_date = close_perihel_date + dt.timedelta((-nr_steps+ind)*step)
-            self.root.all_planets[i].set_date(close_perihel_date)
-            self.plat[i] = self.root.all_planets[i].lat
-            self.plon[i] = self.root.all_planets[i].lon
-            self.pdist[i] = self.root.all_planets[i].rad
-            self.px[i] = self.root.all_planets[i].x
-            self.py[i] = self.root.all_planets[i].y
-            self.pz[i] = self.root.all_planets[i].z
-            self.root.all_planets[i].set_date(original_date)
 
     def clear(self):
         self.ax.cla()
         self.canvas.draw()
 
     def plot(self):
-            
+        
         ###### SET UP ######
         scale = 1.8 * self.root.guisize / 400
         Orbit_pol_lw = scale * 1.0
@@ -840,7 +766,7 @@ class Plotcanvas():
         planetcolors = np.array([[0.8, 0.6, 0.4], [0.9, 0.8, 0.5], [0.1, 0.5, 1], [0.9, 0.3, 0], [0.9, 0.8, 0.5], [0.8, 0.6, 0.4], [0, 0.7, 0.7], [0, 0.5, 0.9]])
 
 
-        ###### POSITIONS ######
+        ###### POSITIONS AND ORBITS ######
         x = np.zeros(9)
         y = np.zeros(9)
         ox = np.empty((9, 0)).tolist()
@@ -848,7 +774,7 @@ class Plotcanvas():
         oz = np.empty((9, 0)).tolist()
         px = np.zeros(9)
         py = np.zeros(9)
-        pd = np.zeros(9)
+        pdist = np.zeros(9)
         pole = np.zeros(9)
         if self.root.view_mode == 0:
             for i in range(8):
@@ -857,14 +783,14 @@ class Plotcanvas():
                 [ox[i], oy[i]] = pol2cart(i+1, phi)
         else:
             for i in range(9):
-                x[i] = self.root.all_planets[i].x
-                y[i] = self.root.all_planets[i].y
-                ox[i] = self.ox[i]
-                oy[i] = self.oy[i]
-                oz[i] = self.oz[i]
-                px[i] = self.px[i]
-                py[i] = self.py[i]
-                pd[i] = np.sqrt(px[i]**2 + py[i]**2)
+                x[i]  = self.root.all_planets[i].x
+                y[i]  = self.root.all_planets[i].y
+                ox[i] = self.root.all_planets[i].orbit.ox
+                oy[i] = self.root.all_planets[i].orbit.oy
+                oz[i] = self.root.all_planets[i].orbit.oz
+                px[i] = self.root.all_planets[i].orbit.px
+                py[i] = self.root.all_planets[i].orbit.py
+                pdist[i] = self.root.all_planets[i].orbit.pdist
                 pole[i] = self.root.all_planets[i].pole
         x[8] = self.root.all_planets[8].x - self.root.all_planets[2].x
         y[8] = self.root.all_planets[8].y - self.root.all_planets[2].y
@@ -897,7 +823,7 @@ class Plotcanvas():
         y = view_scale * y
         px = view_scale * px
         py = view_scale * py
-        pd = view_scale * pd
+        pdist = view_scale * pdist
         for i in range(9):
             ox[i] = [view_scale * n for n in ox[i]]
             oy[i] = [view_scale * n for n in oy[i]]
@@ -951,7 +877,7 @@ class Plotcanvas():
                     self.ax.plot(select_larger_zero(ox[i], oz[i]), select_larger_zero(oy[i], oz[i]), color=[0.35, 0.35, 0.35], linewidth=Orbit_pol_lw, zorder=0)
                 
                 # perihels
-                self.ax.plot([px[i] * (1 - Perihel_size / pd[i]), px[i]], [py[i] * (1 - Perihel_size / pd[i]), py[i]], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
+                self.ax.plot([px[i] * (1 - Perihel_size / pdist[i]), px[i]], [py[i] * (1 - Perihel_size / pdist[i]), py[i]], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
                 
                 # planets
                 self.ax.add_patch(plt.Circle((x[i], y[i]), planetsizes[i], color=planetcolors[i,:], zorder=2))
@@ -1037,9 +963,11 @@ class Planet():
         self.y = 0
         self.z = 0
         self.date = dt.datetime(2000, 1, 1, 12, 0, 0)
+        self.orbit = Orbit(self)
+        self.set_date(self.date)
 
-    def set_date(self, datetime):
-
+    def set_date(self, datetime, *args):
+        old_date = self.date
         self.date = datetime
         t = ap.time.Time(str(datetime.year) + '-' + str(datetime.month) + '-' + str(datetime.day) + ' ' + str(datetime.hour) + ':' + str(datetime.minute) + ':' + str(datetime.second), scale='utc')
         
@@ -1053,6 +981,105 @@ class Planet():
         self.x = HME_cart[0].to(ap.units.au).value
         self.y = HME_cart[1].to(ap.units.au).value
         self.z = HME_cart[2].to(ap.units.au).value
+        
+        # vergleiche Umlaufnummer seit J2000, wenn verändert, berechne Orbit neu
+        if len(args) == 9: #deaktiviert
+            umlaufnr_alt = int((old_date-dt.datetime(2000, 1, 1, 12, 0, 0)).days/self.period)
+            umlaufnr_neu = int((self.date-dt.datetime(2000, 1, 1, 12, 0, 0)).days/self.period)
+            if not umlaufnr_neu == umlaufnr_alt:
+                print(self.name_de + ": Umlauf Nr. " + str(umlaufnr_neu) + " (neu)")
+                self.orbit.calc_precise()
+            else:
+                print(self.name_de + ": Umlauf Nr. " + str(umlaufnr_neu))
+
+
+
+# ----------------------------------------------
+# CLASS ORBITS
+# ----------------------------------------------
+class Orbit():
+    def __init__(self, root):
+        self.root = root
+        self.olat = []
+        self.olon = []
+        self.odist = []
+        self.ox = []
+        self.oy = []
+        self.oz = []
+        self.plat  = 0
+        self.plon  = 0
+        self.pdist = 0
+        self.px = 0
+        self.py = 0
+        self.pz = 0
+        self.calc_simple()
+    
+    def reset(self):
+        self.olat = []
+        self.olon = []
+        self.odist = []
+        self.ox = []
+        self.oy = []
+        self.oz = []
+        self.plat  = 0
+        self.plon  = 0
+        self.pdist = 0
+        self.px = 0
+        self.py = 0
+        self.pz = 0
+
+    def calc_simple(self):
+        self.reset()
+        nr_steps = 200
+        self.plon = self.root.perihel
+        self.pdist = self.root.periheldist
+        [self.px, self.py] = pol2cart(self.pdist, self.plon)
+        for n in range(nr_steps):
+            self.olat.append(0)
+            self.olon.append(n/(nr_steps-1) * 360 + self.root.perihel + 180)
+            self.odist.append(self.root.p / (1 - self.root.excen * np.cos(n/(nr_steps-1) * 2*np.pi)))
+            [ox_, oy_] = pol2cart(self.odist[n], self.olon[n])
+            self.ox.append(ox_)
+            self.oy.append(oy_)
+            self.oz.append(np.sin(np.pi/180*(self.olon[n] - self.root.aufstkn)))
+
+    def calc_precise(self):
+        self.reset()
+        nr_steps = 40
+        step = self.root.period / (nr_steps-1)
+        original_date = self.root.date
+        for n in range(nr_steps):
+            self.root.set_date(original_date + dt.timedelta((-nr_steps+n)*step), 'leave_orbit')
+            self.olat.append(self.root.lat)
+            self.olon.append(self.root.lon)
+            self.odist.append(self.root.rad)
+            self.ox.append(self.root.x)
+            self.oy.append(self.root.y)
+            self.oz.append(self.root.z)
+        
+        # coarse perihel position
+        ind1 = np.argmin(self.odist)
+        close_perihel_distances = []
+        close_perihel_date = original_date + dt.timedelta((-nr_steps+ind1)*step)
+        
+        # fine calculation
+        step = step / (nr_steps-1)
+        for n in range(nr_steps):
+            self.root.set_date(close_perihel_date + dt.timedelta((-nr_steps+n)*step), 'leave_orbit')
+            close_perihel_distances.append(self.root.rad)
+        ind2 = np.argmin(close_perihel_distances)
+        close_perihel_date = close_perihel_date + dt.timedelta((-nr_steps+ind2)*step)
+        
+        # set planet to found date and set perihel
+        self.root.set_date(close_perihel_date, 'leave_orbit')
+        self.plat = self.root.lat
+        self.plon = self.root.lon
+        self.pdist = self.root.rad
+        self.px = self.root.x
+        self.py = self.root.y
+        self.pz = self.root.z
+        self.root.set_date(original_date, 'leave_orbit')
+
 
 
 
