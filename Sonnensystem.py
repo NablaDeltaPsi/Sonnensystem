@@ -16,6 +16,7 @@ import astropy as ap
 import astropy.coordinates as apc
 mpl.use('TkCairo')
 from scipy.interpolate import interp1d, CubicSpline
+from scipy.optimize import curve_fit
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -79,6 +80,9 @@ def select_larger_zero(array, check):
             new = np.append(new, array[i])
     return new
 
+def Kepler(x, P, E, L):
+    y = P / (1 + E * np.cos((x-L) / 180 * np.pi))
+    return y
 
 
 # ----------------------------------------------
@@ -192,29 +196,24 @@ class NewGUI():
         self.entry_1 = tk.Entry(self.root, justify='center')
         self.entry_1.place(x=x1, y=0, height=h1, width=pts(width_dm), anchor='nw')
         self.entry_1.insert("0",str(mydate.day))
-        self.entry_1.bind('<Right>', self.replot_day_p)
-        self.entry_1.bind('<Left>', self.replot_day_m)
-        self.entry_1.bind('<Control-Right>', self.replot_3days_p)
-        self.entry_1.bind('<Control-Left>', self.replot_3days_m)
-        self.entry_1.bind("<MouseWheel>", self.replot_mouse_wheel)
+        self.entry_1.bind('<Up>', self.replot_day_p)
+        self.entry_1.bind('<Down>', self.replot_day_m)
+        self.entry_1.bind('<Control-Up>', self.replot_3days_p)
+        self.entry_1.bind('<Control-Down>', self.replot_3days_m)
 
         self.entry_2 = tk.Entry(self.root, justify='center')
         self.entry_2.place(x=x3, y=0, height=h1, width=pts(width_dm), anchor='nw')
         self.entry_2.insert("0",str(mydate.month))
-        self.entry_2.bind('<Right>', self.replot_month_p)
-        self.entry_2.bind('<Left>', self.replot_month_m)
-        self.entry_2.bind("<MouseWheel>", self.replot_mouse_wheel)
+        self.entry_2.bind('<Up>', self.replot_month_p)
+        self.entry_2.bind('<Down>', self.replot_month_m)
 
         self.entry_3 = tk.Entry(self.root, justify='center')
         self.entry_3.place(x=x5, y=0, height=h1, width=pts(width_yr), anchor='nw')
         self.entry_3.insert("0",str(mydate.year))
-        self.entry_3.bind('<Right>', self.replot_year_p)
-        self.entry_3.bind('<Left>', self.replot_year_m)
-        self.entry_3.bind('<Control-Right>', self.replot_century_p)
-        self.entry_3.bind('<Control-Left>', self.replot_century_m)
+        self.entry_3.bind('<Up>', self.replot_year_p)
+        self.entry_3.bind('<Down>', self.replot_year_m)
         self.entry_3.bind('<Control-Up>', self.replot_century_p)
         self.entry_3.bind('<Control-Down>', self.replot_century_m)
-        self.entry_3.bind("<MouseWheel>", self.replot_mouse_wheel)
 
         self.button_replot_dp = tk.Button(self.root, text="+", command=self.replot_day_p)
         self.button_replot_dp.place(x=x2, y=0, height=h2, width=pts(width_pm), anchor='nw')
@@ -636,27 +635,33 @@ class NewGUI():
                 self.replot_day_m()
         
     def switch_elongation_selection(self, *args):
+        current_focus = self.root.focus_get()
+        if (current_focus == self.entry_1 or current_focus == self.entry_2 or current_focus == self.entry_3):
+            return
         if self.dropdown_elongation_var.get()==self.elongation_select[len(self.elongation_select)-1]:
             self.dropdown_elongation_var.set(self.elongation_select[0])
-            self.replot()
+            self.set_date_planets()
             return
         else:
             for i in range(len(self.elongation_select)):
                 if self.dropdown_elongation_var.get()==self.elongation_select[i]:
                     self.dropdown_elongation_var.set(self.elongation_select[i+1])
-                    self.replot()
+                    self.set_date_planets()
                     return
 
     def switch_elongation_selection_rev(self, *args):
+        current_focus = self.root.focus_get()
+        if (current_focus == self.entry_1 or current_focus == self.entry_2 or current_focus == self.entry_3):
+            return
         if self.dropdown_elongation_var.get()==self.elongation_select[0]:
             self.dropdown_elongation_var.set(self.elongation_select[len(self.elongation_select)-1])
-            self.replot()
+            self.set_date_planets()
             return
         else:
             for i in range(len(self.elongation_select)):
                 if self.dropdown_elongation_var.get()==self.elongation_select[i]:
                     self.dropdown_elongation_var.set(self.elongation_select[i-1])
-                    self.replot()
+                    self.set_date_planets()
                     return
 
     def new_guilarger(self, *args):
@@ -1027,7 +1032,10 @@ class Orbit():
         self.px = 0
         self.py = 0
         self.pz = 0
-        self.calc_precise()
+        if self.root.name_en == 'moon':
+            self.calc_simple()
+        else:
+            self.calc_precise()
     
     def reset(self):
         self.olat = []
@@ -1061,8 +1069,8 @@ class Orbit():
     def calc_precise(self):
         start_time = time.time()
         self.reset()
-        nr_steps = 10
-        steps = np.linspace(0, self.root.period, nr_steps)
+        nr_steps = 14 # doppeltes einer ungeraden Zahl
+        steps = np.linspace(0, 4*self.root.period, nr_steps)
         steps = steps[:-1]
         original_date = self.root.date
         templat = []
@@ -1086,14 +1094,16 @@ class Orbit():
         templon.append(templon[1]+360)
         templat.append(templat[1])
         tempdist.append(tempdist[1])
-        
-        # fine interpolation in polar coordinates for perihel
+
+        # fit orbit in polar coordinates
         nr_steps_interp = 10000
         templon_interp = np.linspace(0, 360, nr_steps_interp)
-        f_lat = interp1d(templon, templat, kind='quadratic')
-        f_dist = interp1d(templon, tempdist, kind='quadratic')
-        templat_interp = f_lat(templon_interp)
-        tempdist_interp = f_dist(templon_interp)
+        # in-plane Kepler-fit
+        param, _ = curve_fit(Kepler, templon, tempdist, p0=[self.root.p, self.root.e, self.root.perihel])
+        tempdist_interp = Kepler(templon_interp, param[0], param[1], param[2])
+        # latitute polynomial fit
+        poly_lat = np.poly1d(np.polyfit(templon, templat,6))
+        templat_interp = poly_lat(templon_interp)
         templon = templon_interp.tolist()
         templat = templat_interp.tolist()
         tempdist = tempdist_interp.tolist()
@@ -1104,7 +1114,7 @@ class Orbit():
         self.plon  = templon[perihelind]
         self.pdist = tempdist[perihelind]
 
-        # coarse interpolation for plotting
+        # coarse selection for plotting
         nr_steps_plot = 80
         for i in range(nr_steps_plot-1):
             self.olon.append(templon[int(i*len(templon)/nr_steps_plot)])
