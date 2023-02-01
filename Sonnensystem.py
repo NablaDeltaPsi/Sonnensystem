@@ -30,6 +30,12 @@ def pol2cart(rho, phi):
     y = np.multiply(rho, np.sin(phi / 180 * np.pi))
     return(x, y)
 
+def sph2cart(rho, theta, phi):
+    x = np.multiply(rho, np.sin(theta / 180 * np.pi), np.cos(phi / 180 * np.pi))
+    y = np.multiply(rho, np.sin(theta / 180 * np.pi), np.sin(phi / 180 * np.pi))
+    z = np.multiply(rho, np.cos(theta / 180 * np.pi))
+    return (x, y, z)
+
 def pts(*args):
     # accepts str, str+'p', int, float and returns sum as str+'p'
     # '-' sets the following argument negative
@@ -983,7 +989,7 @@ class Planet():
         self.z = HME_cart[2].to(ap.units.au).value
         
         # vergleiche Umlaufnummer seit J2000, wenn verändert, berechne Orbit neu
-        if len(args) == 9: #deaktiviert
+        if len(args) == 9: #ungleich null deaktiviert
             umlaufnr_alt = int((old_date-dt.datetime(2000, 1, 1, 12, 0, 0)).days/self.period)
             umlaufnr_neu = int((self.date-dt.datetime(2000, 1, 1, 12, 0, 0)).days/self.period)
             if not umlaufnr_neu == umlaufnr_alt:
@@ -1012,7 +1018,7 @@ class Orbit():
         self.px = 0
         self.py = 0
         self.pz = 0
-        self.calc_simple()
+        self.calc_precise()
     
     def reset(self):
         self.olat = []
@@ -1044,8 +1050,9 @@ class Orbit():
             self.oz.append(np.sin(np.pi/180*(self.olon[n] - self.root.aufstkn)))
 
     def calc_precise(self):
+        print("calc orbit of " + self.root.name_en)
         self.reset()
-        nr_steps = 40
+        nr_steps = 30
         step = self.root.period / (nr_steps-1)
         original_date = self.root.date
         for n in range(nr_steps):
@@ -1053,34 +1060,38 @@ class Orbit():
             self.olat.append(self.root.lat)
             self.olon.append(self.root.lon)
             self.odist.append(self.root.rad)
-            self.ox.append(self.root.x)
-            self.oy.append(self.root.y)
-            self.oz.append(self.root.z)
-        
-        # coarse perihel position
-        ind1 = np.argmin(self.odist)
-        close_perihel_distances = []
-        close_perihel_date = original_date + dt.timedelta((-nr_steps+ind1)*step)
-        
-        # fine calculation
-        step = step / (nr_steps-1)
-        for n in range(nr_steps):
-            self.root.set_date(close_perihel_date + dt.timedelta((-nr_steps+n)*step), 'leave_orbit')
-            close_perihel_distances.append(self.root.rad)
-        ind2 = np.argmin(close_perihel_distances)
-        close_perihel_date = close_perihel_date + dt.timedelta((-nr_steps+ind2)*step)
-        
-        # set planet to found date and set perihel
-        self.root.set_date(close_perihel_date, 'leave_orbit')
-        self.plat = self.root.lat
-        self.plon = self.root.lon
-        self.pdist = self.root.rad
-        self.px = self.root.x
-        self.py = self.root.y
-        self.pz = self.root.z
         self.root.set_date(original_date, 'leave_orbit')
 
+        # sort arrays
+        sortindices = np.argsort(self.olon)
+        self.olon = [self.olon[idx] for idx in sortindices]
+        self.olat = [self.olat[idx] for idx in sortindices]
+        self.odist = [self.odist[idx] for idx in sortindices]
 
+        # coarse interpolation for plotting (better in polar coordinates)
+        nr_steps_interp = 150
+        olon_interp = np.arange(0, 360, 360/nr_steps_interp)
+        olat_interp = np.interp(olon_interp,self.olon,self.olat, period=360)
+        odist_interp = np.interp(olon_interp,self.olon,self.odist, period=360)
+        self.olon = olon_interp.tolist()
+        self.olat = olat_interp.tolist()
+        self.odist = odist_interp.tolist()
+        self.olon.append(self.olon[0])
+        self.olat.append(self.olat[0])
+        self.odist.append(self.odist[0])
+
+        # calculate cartesian
+        [self.ox, self.oy, self.oz] = apc.spherical_to_cartesian(self.odist, np.radians(self.olat), np.radians(self.olon))
+        
+        # set perihel
+        perihelind = np.argmin(self.odist)        
+        self.plat  = self.olat[perihelind]
+        self.plon  = self.olon[perihelind]
+        self.pdist = self.odist[perihelind]
+        self.px = self.ox[perihelind]
+        self.py = self.oy[perihelind]
+        self.pz = self.oz[perihelind]
+        
 
 
 # ----------------------------------------------
