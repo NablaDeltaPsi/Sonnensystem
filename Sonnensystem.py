@@ -15,6 +15,7 @@ import ctypes
 import astropy as ap
 import astropy.coordinates as apc
 mpl.use('TkCairo')
+from scipy.interpolate import interp1d, CubicSpline
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -300,7 +301,7 @@ class NewGUI():
         y = int(self.entry_3.get())
 
         for i in range(len(self.all_planets)):
-            self.all_planets[i].set_date(dt.datetime(y, m, d, 12, 0, 0))
+            self.all_planets[i].set_date(dt.datetime(y, m, d, 12, 0, 0), 1)
 
         for i in range(len(self.all_planets)):
             if self.dropdown_elongation_var.get()==self.all_planets[i].name_de:
@@ -348,8 +349,8 @@ class NewGUI():
                 old_daydiff = 0
                 while True:
                     new_date = Datum_aktuell + dt.timedelta(timedelta)
-                    self.all_planets[2].set_date(dt.datetime(new_date.year, new_date.month, new_date.day, 12, 0, 0))
-                    self.all_planets[i].set_date(dt.datetime(new_date.year, new_date.month, new_date.day, 12, 0, 0))
+                    self.all_planets[2].set_date(dt.datetime(new_date.year, new_date.month, new_date.day, 12, 0, 0), 0)
+                    self.all_planets[i].set_date(dt.datetime(new_date.year, new_date.month, new_date.day, 12, 0, 0), 0)
                     new_elong = self.calc_elongation(i)
                     new_elong_diff = new_elong - old_elong
                     if abs(timedelta) > 1 and daydiff == 1 and old_daydiff == 1: # mindestens zwei ein-Tages-Schritte vollzogen
@@ -757,6 +758,8 @@ class Plotcanvas():
         self.canvas.draw()
 
     def plot(self):
+                
+        start_time = time.time()
         
         ###### SET UP ######
         scale = 1.8 * self.root.guisize / 400
@@ -936,6 +939,11 @@ class Plotcanvas():
         self.ax.axis('off')
         
         self.canvas.draw()
+        
+        # measure time and print
+        end_time = time.time()
+        print("plotted in " + "{:.1f}".format((end_time-start_time)*1000) + " ms")
+
 
 
 
@@ -970,9 +978,9 @@ class Planet():
         self.z = 0
         self.date = dt.datetime(2000, 1, 1, 12, 0, 0)
         self.orbit = Orbit(self)
-        self.set_date(self.date)
+        self.set_date(self.date, 1)
 
-    def set_date(self, datetime, *args):
+    def set_date(self, datetime, recalc_orbit):
         old_date = self.date
         self.date = datetime
         t = ap.time.Time(str(datetime.year) + '-' + str(datetime.month) + '-' + str(datetime.day) + ' ' + str(datetime.hour) + ':' + str(datetime.minute) + ':' + str(datetime.second), scale='utc')
@@ -989,14 +997,15 @@ class Planet():
         self.z = HME_cart[2].to(ap.units.au).value
         
         # vergleiche Umlaufnummer seit J2000, wenn verändert, berechne Orbit neu
-        if len(args) == 9: #ungleich null deaktiviert
+        if recalc_orbit == 1:
             umlaufnr_alt = int((old_date-dt.datetime(2000, 1, 1, 12, 0, 0)).days/self.period)
             umlaufnr_neu = int((self.date-dt.datetime(2000, 1, 1, 12, 0, 0)).days/self.period)
-            if not umlaufnr_neu == umlaufnr_alt:
-                print(self.name_de + ": Umlauf Nr. " + str(umlaufnr_neu) + " (neu)")
+            if not umlaufnr_neu - umlaufnr_neu % 10 == umlaufnr_alt - umlaufnr_alt % 10 and not self.name_en == 'moon':
+                #print(self.name_de + ": Umlauf Nr. " + str(umlaufnr_neu) + " (neu)")
                 self.orbit.calc_precise()
             else:
-                print(self.name_de + ": Umlauf Nr. " + str(umlaufnr_neu))
+                #print(self.name_de + ": Umlauf Nr. " + str(umlaufnr_neu))
+                pass
 
 
 
@@ -1050,47 +1059,71 @@ class Orbit():
             self.oz.append(np.sin(np.pi/180*(self.olon[n] - self.root.aufstkn)))
 
     def calc_precise(self):
-        print("calc orbit of " + self.root.name_en)
+        start_time = time.time()
         self.reset()
-        nr_steps = 30
-        step = self.root.period / (nr_steps-1)
+        nr_steps = 10
+        steps = np.linspace(0, self.root.period, nr_steps)
+        steps = steps[:-1]
         original_date = self.root.date
-        for n in range(nr_steps):
-            self.root.set_date(original_date + dt.timedelta((-nr_steps+n)*step), 'leave_orbit')
-            self.olat.append(self.root.lat)
-            self.olon.append(self.root.lon)
-            self.odist.append(self.root.rad)
-        self.root.set_date(original_date, 'leave_orbit')
+        templat = []
+        templon = []
+        tempdist = []
+        for n in range(len(steps)):
+            self.root.set_date(original_date + dt.timedelta(steps[n]), 0)
+            templat.append(self.root.lat)
+            templon.append(self.root.lon)
+            tempdist.append(self.root.rad)
+        self.root.set_date(original_date, 0)
 
-        # sort arrays
-        sortindices = np.argsort(self.olon)
-        self.olon = [self.olon[idx] for idx in sortindices]
-        self.olat = [self.olat[idx] for idx in sortindices]
-        self.odist = [self.odist[idx] for idx in sortindices]
+        # sort arrays and extend
+        sortindices = np.argsort(templon)
+        templon = [templon[idx] for idx in sortindices]
+        templat = [templat[idx] for idx in sortindices]
+        tempdist = [tempdist[idx] for idx in sortindices]
+        templon.insert(0, templon[-1]-360)
+        templat.insert(0, templat[-1])
+        tempdist.insert(0, tempdist[-1])
+        templon.append(templon[1]+360)
+        templat.append(templat[1])
+        tempdist.append(tempdist[1])
+        
+        # fine interpolation in polar coordinates for perihel
+        nr_steps_interp = 10000
+        templon_interp = np.linspace(0, 360, nr_steps_interp)
+        f_lat = interp1d(templon, templat, kind='quadratic')
+        f_dist = interp1d(templon, tempdist, kind='quadratic')
+        templat_interp = f_lat(templon_interp)
+        tempdist_interp = f_dist(templon_interp)
+        templon = templon_interp.tolist()
+        templat = templat_interp.tolist()
+        tempdist = tempdist_interp.tolist()
+        
+        # set perihel
+        perihelind = np.argmin(tempdist)        
+        self.plat  = templat[perihelind]
+        self.plon  = templon[perihelind]
+        self.pdist = tempdist[perihelind]
 
-        # coarse interpolation for plotting (better in polar coordinates)
-        nr_steps_interp = 150
-        olon_interp = np.arange(0, 360, 360/nr_steps_interp)
-        olat_interp = np.interp(olon_interp,self.olon,self.olat, period=360)
-        odist_interp = np.interp(olon_interp,self.olon,self.odist, period=360)
-        self.olon = olon_interp.tolist()
-        self.olat = olat_interp.tolist()
-        self.odist = odist_interp.tolist()
+        # coarse interpolation for plotting
+        nr_steps_plot = 80
+        for i in range(nr_steps_plot-1):
+            self.olon.append(templon[int(i*len(templon)/nr_steps_plot)])
+            self.olat.append(templat[int(i*len(templat)/nr_steps_plot)])
+            self.odist.append(tempdist[int(i*len(tempdist)/nr_steps_plot)])
+                
+        # repeat for closed circle
         self.olon.append(self.olon[0])
         self.olat.append(self.olat[0])
         self.odist.append(self.odist[0])
 
         # calculate cartesian
         [self.ox, self.oy, self.oz] = apc.spherical_to_cartesian(self.odist, np.radians(self.olat), np.radians(self.olon))
+        [self.px, self.py, self.pz] = apc.spherical_to_cartesian(self.pdist, np.radians(self.plat), np.radians(self.plon))
         
-        # set perihel
-        perihelind = np.argmin(self.odist)        
-        self.plat  = self.olat[perihelind]
-        self.plon  = self.olon[perihelind]
-        self.pdist = self.odist[perihelind]
-        self.px = self.ox[perihelind]
-        self.py = self.oy[perihelind]
-        self.pz = self.oz[perihelind]
+        # measure time and print
+        end_time = time.time()
+        print("calculated orbit of " + self.root.name_en + " in " + "{:.1f}".format((end_time-start_time)*1000) + " ms")
+
         
 
 
