@@ -84,6 +84,21 @@ def Kepler(x, P, E, L):
     y = P / (1 + E * np.cos((x-L) / 180 * np.pi))
     return y
 
+def calc_date_perihel(planet, timedir, *args):
+    if len(args) > 0:
+        thisdate = args[0]
+    else:
+        thisdate = planet.date
+    if timedir > 0:
+        thisdate = thisdate + dt.timedelta(1 + planet.period)
+    else:
+        thisdate = thisdate + dt.timedelta(-1)
+    original_date = planet.date
+    planet.set_date(thisdate, 0)
+    angle_since_peri = (planet.lon + 360 - planet.perihel) % 360
+    days_since_perihel = (angle_since_peri / 360 * planet.period) % planet.period
+    planet.set_date(original_date, 0)
+    return thisdate - dt.timedelta(days_since_perihel)
 
 # ----------------------------------------------
 # CLASS NEWGUI
@@ -145,6 +160,8 @@ class NewGUI():
         self.root.bind('<e>',  self.replot_elongation_p)
         self.root.bind('<Control-e>',  self.replot_elongation_m)
         self.root.bind('<f>',  self.switch_fix_earth)
+        self.root.bind('<p>',  self.replot_perihel_p)
+        self.root.bind('<Control-p>',  self.replot_perihel_m)
         #self.root.bind("<KeyPress-Right>", self.replot_step)
         #self.root.bind("<KeyRelease-Right>", self.replot_stop)
 
@@ -289,6 +306,12 @@ class NewGUI():
 
     def replot(self, *args):
         self.set_date_planets()
+        umlaufnr = "Umlauf Nr.: "
+        for i in range(8):
+            if i > 0:
+                umlaufnr = umlaufnr + ", "
+            umlaufnr = umlaufnr + str(self.all_planets[i].umlaufnr)
+        print(umlaufnr)
         self.plot_window.clear()
         self.plot_window.plot()
         self.root.update_idletasks()
@@ -437,7 +460,20 @@ class NewGUI():
                         timedelta -= daydiff
                     old_daydiff = daydiff
                     counter += 1                
-                
+
+    def replot_perihel_p(self, *args):
+        self.replot_perihel(1)
+
+    def replot_perihel_m(self, *args):
+        self.replot_perihel(-1)
+
+    def replot_perihel(self, timedir, *args):
+        for i in range(len(self.all_planets)):
+            if self.dropdown_elongation_var.get()==self.all_planets[i].name_de:
+                perihel_date = calc_date_perihel(self.all_planets[i], timedir)
+                self.replot_date(perihel_date.day, perihel_date.month, perihel_date.year)
+                return
+
     def replot_date(self, d, m, y, *args):
         self.entry_1.delete(0, 'end')
         self.entry_2.delete(0, 'end')
@@ -982,12 +1018,21 @@ class Planet():
         self.y = 0
         self.z = 0
         self.date = dt.datetime(2000, 1, 1, 12, 0, 0)
-        self.orbit = Orbit(self)
+        self.calc_date_perihel_J2000 = self.date
+        self.umlaufnr = 0
+        
+        # update using set_date method
         self.set_date(self.date, 1)
-
+        self.calc_date_perihel_J2000 = calc_date_perihel(self, -1, dt.datetime(2000, 1, 1, 12, 0, 0))
+        self.umlaufnr = int((self.date - self.calc_date_perihel_J2000).days/self.period)
+        self.orbit = Orbit(self)
+        
     def set_date(self, datetime, recalc_orbit):
         old_date = self.date
         self.date = datetime
+        old_umlaufnr = self.umlaufnr
+        self.umlaufnr = int((self.date - self.calc_date_perihel_J2000).days/self.period)
+
         t = ap.time.Time(str(datetime.year) + '-' + str(datetime.month) + '-' + str(datetime.day) + ' ' + str(datetime.hour) + ':' + str(datetime.minute) + ':' + str(datetime.second), scale='utc')
         
         ICRS = apc.SkyCoord(apc.get_body_barycentric(self.name_en, t, ephemeris='builtin'), frame='icrs', representation_type='cartesian')
@@ -1001,17 +1046,10 @@ class Planet():
         self.y = HME_cart[1].to(ap.units.au).value
         self.z = HME_cart[2].to(ap.units.au).value
         
-        # vergleiche Umlaufnummer seit J2000, wenn verändert, berechne Orbit neu
+        # vergleiche Umlaufnummer, wenn verändert, berechne Orbit neu
         if recalc_orbit == 1:
-            umlaufnr_alt = int((old_date-dt.datetime(2000, 1, 1, 12, 0, 0)).days/self.period)
-            umlaufnr_neu = int((self.date-dt.datetime(2000, 1, 1, 12, 0, 0)).days/self.period)
-            if not umlaufnr_neu - umlaufnr_neu % 10 == umlaufnr_alt - umlaufnr_alt % 10 and not self.name_en == 'moon':
-                #print(self.name_de + ": Umlauf Nr. " + str(umlaufnr_neu) + " (neu)")
+            if not self.umlaufnr == old_umlaufnr and not self.name_en == 'moon':
                 self.orbit.calc_precise()
-            else:
-                #print(self.name_de + ": Umlauf Nr. " + str(umlaufnr_neu))
-                pass
-
 
 
 # ----------------------------------------------
@@ -1069,15 +1107,16 @@ class Orbit():
     def calc_precise(self):
         start_time = time.time()
         self.reset()
-        nr_steps = 14 # doppeltes einer ungeraden Zahl
-        steps = np.linspace(0, 4*self.root.period, nr_steps)
+        nr_steps = 6
+        steps = np.linspace(0, self.root.period, nr_steps)
         steps = steps[:-1]
         original_date = self.root.date
+        start_date = calc_date_perihel(self.root, -1)
         templat = []
         templon = []
         tempdist = []
         for n in range(len(steps)):
-            self.root.set_date(original_date + dt.timedelta(steps[n]), 0)
+            self.root.set_date(start_date + dt.timedelta(steps[n]), 0)
             templat.append(self.root.lat)
             templon.append(self.root.lon)
             tempdist.append(self.root.rad)
@@ -1109,13 +1148,13 @@ class Orbit():
         tempdist = tempdist_interp.tolist()
         
         # set perihel
-        perihelind = np.argmin(tempdist)        
+        perihelind = np.argmin(tempdist)
         self.plat  = templat[perihelind]
         self.plon  = templon[perihelind]
         self.pdist = tempdist[perihelind]
 
         # coarse selection for plotting
-        nr_steps_plot = 80
+        nr_steps_plot = 100
         for i in range(nr_steps_plot-1):
             self.olon.append(templon[int(i*len(templon)/nr_steps_plot)])
             self.olat.append(templat[int(i*len(templat)/nr_steps_plot)])
