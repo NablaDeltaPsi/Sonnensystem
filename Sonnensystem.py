@@ -1,4 +1,4 @@
-
+# todo: wieso plotted view 0 schneller als die Detailansichten?
 global GUI_version; GUI_version = '3.2'
 
 import tkinter as tk
@@ -177,7 +177,7 @@ class NewGUI():
         self.all_planets.append(Planet(self, 'saturn',  'Saturn',  10755.70,   78,   9.53707,  0.05415,  92.43194,  113.71504 ))
         self.all_planets.append(Planet(self, 'uranus',  'Uranus',  30687.15,   78,  19.19126,  0.04716, 170.96424,   74.22988 ))
         self.all_planets.append(Planet(self, 'neptune', 'Neptun',  60190.03,  327,  30.06896,  0.00858,  44.97135,  131.72169 ))
-        self.all_planets.append(Planet(self, 'moon', 'Erdmond', 27.3217, 0, 0.00257, 0, 0, 0 ))
+        self.all_planets.append(Planet(self, 'moon', 'Erdmond', 27.3217, 0, 0.00257, 0, 0, 0, self.all_planets[2] ))
 
         mydate = dt.date.today()
         width_dm = 1.5*self.fontsize
@@ -305,38 +305,32 @@ class NewGUI():
         self.root.mainloop()
 
     def replot(self, *args):
-        self.set_date_planets()
-        umlaufnr = "Umlauf Nr.: "
-        for i in range(8):
-            if i > 0:
-                umlaufnr = umlaufnr + ", "
-            umlaufnr = umlaufnr + str(self.all_planets[i].umlaufnr)
-        print(umlaufnr)
-        self.plot_window.clear()
-        self.plot_window.plot()
-        self.root.update_idletasks()
-        time.sleep(0.01)
-
-    def set_date_planets(self):
         d = int(self.entry_1.get())
         m = int(self.entry_2.get())
         y = int(self.entry_3.get())
-
-        for i in range(len(self.all_planets)):
-            self.all_planets[i].set_date(dt.datetime(y, m, d, 12, 0, 0), 1)
-
-        for i in range(len(self.all_planets)):
+        self.plot_window.plot(dt.datetime(y, m, d, 12, 0, 0))
+        for i in range(9):
             if self.dropdown_elongation_var.get()==self.all_planets[i].name_de:
                 self.elongation_text.set( \
                   "  E={:.1f}°".format(self.calc_elongation(i)) + \
                   "  Lon={:.1f}°".format(self.all_planets[i].lon) + \
                   "  Lat={:.1f}°".format(self.all_planets[i].lat) \
                   )
+        self.root.update_idletasks()
+        time.sleep(0.01)
 
     def calc_elongation(self, planet_index, *args):
         # für Erde mach Elongation keinen Sinn
-        if planet_index==2:
+        if planet_index == 2:
             return 0
+        if planet_index == 8:
+            lon_m = self.all_planets[8].lon
+            lon_e = (self.all_planets[2].lon + 180) % 360
+            diff = (lon_m - lon_e + 360) % 360
+            if diff > 180:
+                return 360 - diff
+            else:
+                return diff
         else:
             [x1, y1] = pol2cart(self.all_planets[2].rad, self.all_planets[2].lon)
             [x2, y2] = pol2cart(self.all_planets[planet_index].rad, self.all_planets[planet_index].lon)
@@ -355,6 +349,7 @@ class NewGUI():
         self.replot_elongation(-1)
 
     def replot_elongation(self, timedir, *args):
+        start_time = time.time()
         d = int(self.entry_1.get())
         m = int(self.entry_2.get())
         y = int(self.entry_3.get())
@@ -380,16 +375,14 @@ class NewGUI():
                             if not np.sign(new_elong_diff) == np.sign(old_elong_diff) and new_elong > 15:
                                 new_date = Datum_aktuell + dt.timedelta(timedelta-timedir/abs(timedir))
                                 self.replot_date(new_date.day, new_date.month, new_date.year)
-                                print("Found elongation after " + str(counter) + " steps.")
-                                return
+                                break
                         if i > 2:
                             if not np.sign(new_elong_diff) == np.sign(old_elong_diff) and new_elong > 170:
                                 new_date = Datum_aktuell + dt.timedelta(timedelta-timedir/abs(timedir))
                                 self.replot_date(new_date.day, new_date.month, new_date.year)
-                                print("Found elongation after " + str(counter) + " steps.")
-                                return
+                                break
                     if timedelta > 1e4:
-                        print("Did not find elongation after " + str(counter) + " steps.")
+                        print("Could not find elongation after " + str(counter) + " steps.")
                         return                        
                     old_elong = new_elong
                     old_elong_diff = new_elong_diff
@@ -459,7 +452,11 @@ class NewGUI():
                     else:
                         timedelta -= daydiff
                     old_daydiff = daydiff
-                    counter += 1                
+                    counter += 1
+                    
+                # measure time and print
+                end_time = time.time()
+                print("Found elongation after " + str(counter) + " steps (" + "{:.1f}".format((end_time-start_time)*1000) + " ms).")
 
     def replot_perihel_p(self, *args):
         self.replot_perihel(1)
@@ -676,13 +673,13 @@ class NewGUI():
             return
         if self.dropdown_elongation_var.get()==self.elongation_select[len(self.elongation_select)-1]:
             self.dropdown_elongation_var.set(self.elongation_select[0])
-            self.set_date_planets()
+            self.replot()
             return
         else:
             for i in range(len(self.elongation_select)):
                 if self.dropdown_elongation_var.get()==self.elongation_select[i]:
                     self.dropdown_elongation_var.set(self.elongation_select[i+1])
-                    self.set_date_planets()
+                    self.replot()
                     return
 
     def switch_elongation_selection_rev(self, *args):
@@ -691,13 +688,13 @@ class NewGUI():
             return
         if self.dropdown_elongation_var.get()==self.elongation_select[0]:
             self.dropdown_elongation_var.set(self.elongation_select[len(self.elongation_select)-1])
-            self.set_date_planets()
+            self.replot()
             return
         else:
             for i in range(len(self.elongation_select)):
                 if self.dropdown_elongation_var.get()==self.elongation_select[i]:
                     self.dropdown_elongation_var.set(self.elongation_select[i-1])
-                    self.set_date_planets()
+                    self.replot()
                     return
 
     def new_guilarger(self, *args):
@@ -798,9 +795,9 @@ class Plotcanvas():
         self.ax.cla()
         self.canvas.draw()
 
-    def plot(self):
-                
+    def plot(self, datetime):
         start_time = time.time()
+        self.clear()
         
         ###### SET UP ######
         scale = 1.8 * self.root.guisize / 400
@@ -808,50 +805,20 @@ class Plotcanvas():
         Moon_size = 0.07
         Perihel_size = 0.3
         Sun_size = 0.45
-        Moon_orbit = 180
+        Moon_orbit = 0.5
         Saturnring_inner = 0.30
         Saturnring_outer = 0.38
 
         planetsizes = 0.009 * np.array([15, 24, 25, 22, 40, 23, 30, 30])
         planetcolors = np.array([[0.8, 0.6, 0.4], [0.9, 0.8, 0.5], [0.1, 0.5, 1], [0.9, 0.3, 0], [0.9, 0.8, 0.5], [0.8, 0.6, 0.4], [0, 0.7, 0.7], [0, 0.5, 0.9]])
 
-
-        ###### POSITIONS AND ORBITS ######
-        x = np.zeros(9)
-        y = np.zeros(9)
-        ox = np.empty((9, 0)).tolist()
-        oy = np.empty((9, 0)).tolist()
-        oz = np.empty((9, 0)).tolist()
-        px = np.zeros(9)
-        py = np.zeros(9)
-        pdist = np.zeros(9)
-        pole = np.zeros(9)
-        if self.root.view_mode == 0:
-            for i in range(8):
-                [x[i], y[i]] = pol2cart(i+1, self.root.all_planets[i].lon)
-                phi = np.arange(0, 360.1, 1)
-                [ox[i], oy[i]] = pol2cart(i+1, phi)
-        else:
-            for i in range(9):
-                x[i]  = self.root.all_planets[i].x
-                y[i]  = self.root.all_planets[i].y
-                ox[i] = self.root.all_planets[i].orbit.ox
-                oy[i] = self.root.all_planets[i].orbit.oy
-                oz[i] = self.root.all_planets[i].orbit.oz
-                px[i] = self.root.all_planets[i].orbit.px
-                py[i] = self.root.all_planets[i].orbit.py
-                pdist[i] = self.root.all_planets[i].orbit.pdist
-                pole[i] = self.root.all_planets[i].pole
-        x[8] = self.root.all_planets[8].x - self.root.all_planets[2].x
-        y[8] = self.root.all_planets[8].y - self.root.all_planets[2].y
-
         # select
         if self.root.view_mode == 0:
             view_scale = 1
-            planet_indices = range(8)
+            planet_indices = range(9)
         elif self.root.view_mode == 1:
             view_scale = 4.8
-            planet_indices = [0,1,2,3]
+            planet_indices = [0,1,2,3,8]
         elif self.root.view_mode == 2:
             view_scale = 1.5
             planet_indices = [2,3,4]
@@ -866,7 +833,48 @@ class Plotcanvas():
             planet_indices = [4,5,6,7]
         else:
             view_scale = 2000
-            planet_indices = [2]
+            planet_indices = [2,8]
+
+        ###### UPDATE PLANETS ########
+        for i in planet_indices:
+            self.root.all_planets[i].set_date(datetime, 1)
+
+        umlaufnr = "Umlauf Nr.: "
+        for i in range(9):
+            if i > 0:
+                umlaufnr = umlaufnr + ", "
+            umlaufnr = umlaufnr + str(self.root.all_planets[i].umlaufnr)
+        print(umlaufnr)
+
+        ###### POSITIONS AND ORBITS ######
+        x = np.zeros(9)
+        y = np.zeros(9)
+        ox = np.empty((9, 0)).tolist()
+        oy = np.empty((9, 0)).tolist()
+        oz = np.empty((9, 0)).tolist()
+        px = np.zeros(9)
+        py = np.zeros(9)
+        pdist = np.zeros(9)
+        pole = np.zeros(9)
+        if self.root.view_mode == 0:
+            for i in planet_indices:
+                if i == 8:
+                    [x[i], y[i]] = pol2cart(1, self.root.all_planets[i].lon)
+                else:
+                    [x[i], y[i]] = pol2cart(i+1, self.root.all_planets[i].lon)
+                phi = np.arange(0, 360.1, 1)
+                [ox[i], oy[i]] = pol2cart(i+1, phi)
+        else:
+            for i in planet_indices:
+                x[i]  = self.root.all_planets[i].x
+                y[i]  = self.root.all_planets[i].y
+                ox[i] = self.root.all_planets[i].orbit.ox
+                oy[i] = self.root.all_planets[i].orbit.oy
+                oz[i] = self.root.all_planets[i].orbit.oz
+                px[i] = self.root.all_planets[i].orbit.px
+                py[i] = self.root.all_planets[i].orbit.py
+                pdist[i] = self.root.all_planets[i].orbit.pdist
+                pole[i] = self.root.all_planets[i].pole
     
         # scale
         x = view_scale * x
@@ -878,7 +886,6 @@ class Plotcanvas():
             ox[i] = [view_scale * n for n in ox[i]]
             oy[i] = [view_scale * n for n in oy[i]]
             oz[i] = [view_scale * n for n in oz[i]]
-        Moon_orbit = Moon_orbit / view_scale
         
         # rotate
         if self.root.fix_earth == 1:
@@ -901,7 +908,7 @@ class Plotcanvas():
 
         ###### EQUIDISTANT VIEW ######
         if self.root.view_mode == 0:
-
+            
             # calc and plot planet positions and orbits
             for i in range(8):
                 self.ax.plot(ox[i], oy[i], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
@@ -913,13 +920,18 @@ class Plotcanvas():
             self.ax.add_patch(plt.Circle((x[5], y[5]), Saturnring_inner, color='black', zorder=1))
 
             # plot moon
-            self.ax.add_patch(plt.Circle((x[2] + Moon_orbit * x[8], y[2] + Moon_orbit * y[8]), Moon_size, color=[0.7, 0.7, 0.7]))
+            self.ax.add_patch(plt.Circle(( \
+                x[2] + Moon_orbit * x[8] / np.sqrt(x[8]**2 + y[8]**2), \
+                y[2] + Moon_orbit * y[8] / np.sqrt(x[8]**2 + y[8]**2)), Moon_size, color=[0.7, 0.7, 0.7]))
 
 
         ###### REAL DISTANCES VIEWS ######
         elif self.root.view_mode >= 1 and self.root.view_mode <= 5:
 
             for i in planet_indices:
+                
+                if i==8:
+                    continue
 
                 # orbits
                 self.ax.plot(ox[i], oy[i], color=[0.25, 0.25, 0.25], linewidth=Orbit_pol_lw, zorder=0)
@@ -936,7 +948,7 @@ class Plotcanvas():
             self.ax.add_patch(plt.Circle((0, 0), Sun_size, color=[0.9, 0.8, 0], zorder=1))
 
             # plot earthline
-            self.ax.plot([0, 15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, 15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, zorder=0)
+            self.ax.plot([0,  15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0,  15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, zorder=0)
             self.ax.plot([0, -15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, -15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, linestyle='--', zorder=0)
 
             # plot poles
@@ -950,8 +962,10 @@ class Plotcanvas():
                         color='black', linewidth=Orbit_pol_lw, zorder=3)
 
             # plot moon
-            if 2 in planet_indices and max(planet_indices) < 4:
-                self.ax.add_patch(plt.Circle((x[2] + Moon_orbit * x[8], y[2] + Moon_orbit * y[8]), Moon_size, color=[0.7, 0.7, 0.7]))
+            if 2 in planet_indices:
+                self.ax.add_patch(plt.Circle(( \
+                    x[2] + Moon_orbit * x[8] / np.sqrt(x[8]**2 + y[8]**2), \
+                    y[2] + Moon_orbit * y[8] / np.sqrt(x[8]**2 + y[8]**2)) , Moon_size, color=[0.7, 0.7, 0.7]))
 
             if 5 in planet_indices:
                 self.ax.add_patch(plt.Circle((x[5], y[5]), Saturnring_outer, color=planetcolors[5,:], zorder=1))
@@ -966,6 +980,9 @@ class Plotcanvas():
             # planets
             self.ax.add_patch(plt.Circle((0, 0), planetsizes[2], color=planetcolors[2,:], zorder=1))
             self.ax.add_patch(plt.Circle((x[8], y[8]), Moon_size, color=[0.7, 0.7, 0.7], zorder=2))
+
+            # perihels
+            self.ax.plot([px[8] * (1 - Perihel_size / pdist[8]), px[8]], [py[8] * (1 - Perihel_size / pdist[8]), py[8]], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
 
             # earthline
             self.ax.plot([0, -15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, -15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, zorder=0)
@@ -997,7 +1014,7 @@ class Plotcanvas():
 # CLASS PLANET
 # ----------------------------------------------
 class Planet():
-    def __init__(self, root, name_en, name_de, period, pole, a, excen, perihel, aufstkn):
+    def __init__(self, root, name_en, name_de, period, pole, a, excen, perihel, aufstkn, *parent):
         self.root = root
         self.name_en = name_en
         self.name_de = name_de
@@ -1020,6 +1037,10 @@ class Planet():
         self.date = dt.datetime(2000, 1, 1, 12, 0, 0)
         self.calc_date_perihel_J2000 = self.date
         self.umlaufnr = 0
+        if len(parent) > 0:
+            self.parent = parent[0]
+        else:
+            self.parent = []
         
         # update using set_date method
         self.set_date(self.date, 1)
@@ -1029,6 +1050,8 @@ class Planet():
         
     def set_date(self, datetime, recalc_orbit):
         old_date = self.date
+        if datetime == old_date:
+            return
         self.date = datetime
         old_umlaufnr = self.umlaufnr
         self.umlaufnr = int((self.date - self.calc_date_perihel_J2000).days/self.period)
@@ -1046,9 +1069,20 @@ class Planet():
         self.y = HME_cart[1].to(ap.units.au).value
         self.z = HME_cart[2].to(ap.units.au).value
         
+        # mit Parent setze relative Koordinaten
+        if self.parent:
+            if not self.parent.date == self.date:
+                self.parent.set_date(datetime, recalc_orbit)
+            self.x = self.x - self.parent.x
+            self.y = self.y - self.parent.y
+            self.z = self.z - self.parent.z
+            [self.rad, self.lat, self.lon] = apc.cartesian_to_spherical(self.x, self.y, self.z)
+            self.lat = self.lat.value * 180 / np.pi
+            self.lon = self.lon.value * 180 / np.pi
+        
         # vergleiche Umlaufnummer, wenn verändert, berechne Orbit neu
         if recalc_orbit == 1:
-            if not self.umlaufnr == old_umlaufnr and not self.name_en == 'moon':
+            if not self.umlaufnr == old_umlaufnr:
                 self.orbit.calc_precise()
 
 
@@ -1135,31 +1169,23 @@ class Orbit():
         tempdist.append(tempdist[1])
 
         # fit orbit in polar coordinates
-        nr_steps_interp = 10000
+        nr_steps_interp = 80
         templon_interp = np.linspace(0, 360, nr_steps_interp)
         # in-plane Kepler-fit
-        param, _ = curve_fit(Kepler, templon, tempdist, p0=[self.root.p, self.root.e, self.root.perihel])
+        param, _ = curve_fit(Kepler, templon, tempdist, p0=[self.root.p, self.root.excen, self.root.perihel])
         tempdist_interp = Kepler(templon_interp, param[0], param[1], param[2])
         # latitute polynomial fit
         poly_lat = np.poly1d(np.polyfit(templon, templat,6))
         templat_interp = poly_lat(templon_interp)
-        templon = templon_interp.tolist()
-        templat = templat_interp.tolist()
-        tempdist = tempdist_interp.tolist()
+        self.olon = templon_interp.tolist()
+        self.olat = templat_interp.tolist()
+        self.odist = tempdist_interp.tolist()
         
         # set perihel
-        perihelind = np.argmin(tempdist)
-        self.plat  = templat[perihelind]
-        self.plon  = templon[perihelind]
-        self.pdist = tempdist[perihelind]
+        self.plat  = 0
+        self.plon  = param[2]
+        self.pdist = param[0]/(1+param[1])
 
-        # coarse selection for plotting
-        nr_steps_plot = 100
-        for i in range(nr_steps_plot-1):
-            self.olon.append(templon[int(i*len(templon)/nr_steps_plot)])
-            self.olat.append(templat[int(i*len(templat)/nr_steps_plot)])
-            self.odist.append(tempdist[int(i*len(tempdist)/nr_steps_plot)])
-                
         # repeat for closed circle
         self.olon.append(self.olon[0])
         self.olat.append(self.olat[0])
