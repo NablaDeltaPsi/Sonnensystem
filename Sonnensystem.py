@@ -104,7 +104,7 @@ def calc_date_perihel(planet, timedir, *args):
 class NewGUI():
 
     # guisize and fontsize in points, xpos and ypos in pixels!!
-    def __init__(self, guisize, fontsize, xpos, ypos):
+    def __init__(self, guisize, fontsize, xpos, ypos, *args):
 
         print("NEW GUI SIZE " + str(guisize) + " FONTSIZE " + str(fontsize))
 
@@ -118,8 +118,15 @@ class NewGUI():
         self.repeat_time = 20
         self.repeat_on = True
         self.repeat_count = 0
-        self.view_mode = 0
+        self.view_mode = 0	
         self.fix_earth = 0
+        
+        # date
+        if len(args) > 0:
+            thisdate = dt.date(args[2], args[1], args[0])
+        else:
+            thisdate = dt.date.today()
+        date_init = dt.datetime(thisdate.year, thisdate.month, thisdate.day, 12, 0, 0)
 
         # get fontsize
         default_font = tk.font.nametofont("TkDefaultFont")
@@ -164,9 +171,7 @@ class NewGUI():
         #self.root.bind("<KeyRelease-Right>", self.replot_stop)
 
         # PLANETEN
-        # https://de.wikipedia.org/wiki/Liste_der_Planeten_des_Sonnensystems
-        today = dt.date.today()
-        date_init = dt.datetime(today.year, today.month, today.day, 12, 0, 0)
+        # https://de.wikipedia.org/wiki/Liste_der_Planeten_des_Sonnensystems        
         self.all_planets = []
         #                                                                      Periode   Pol          a     Exzen    Perihel     aufstKn
         self.all_planets.append(Planet(self, date_init, 'mercury', 'Merkur',  87.96926,  315,   0.38710,  0.20563,  77.45645,   48.33167 ))
