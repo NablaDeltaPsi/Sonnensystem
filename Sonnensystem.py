@@ -298,15 +298,16 @@ class NewGUI():
         # clicked widget always focused
         self.root.bind_all("<1>", lambda event:event.widget.focus_set())
 
-        self.replot_date(d, m, y)
-        #self.plot_window.calc_orbits()
+        for i in range(len(self.all_planets)):
+            self.all_planets[i].set_date(dt.datetime(y, m, d, 12, 0, 0), 1)
+        self.replot()
         self.root.mainloop()
 
     def replot(self, *args):
         d = int(self.entry_1.get())
         m = int(self.entry_2.get())
         y = int(self.entry_3.get())
-        self.plot_window.plot(dt.datetime(y, m, d, 12, 0, 0), self.view_mode)
+        self.plot_window.plot(dt.datetime(y, m, d, 12, 0, 0), self.view_mode, self.fix_earth)
         for i in range(9):
             if self.dropdown_elongation_var.get()==self.all_planets[i].name_de:
                 self.elongation_text.set( \
@@ -347,7 +348,7 @@ class NewGUI():
         self.replot_elongation(-1)
 
     def replot_elongation(self, timedir, *args):
-        start_time = time.time()
+        start_time = time.perf_counter()
         d = int(self.entry_1.get())
         m = int(self.entry_2.get())
         y = int(self.entry_3.get())
@@ -453,7 +454,7 @@ class NewGUI():
                     counter += 1
                     
                 # measure time and print
-                end_time = time.time()
+                end_time = time.perf_counter()
                 print("Found elongation after " + str(counter) + " steps (" + "{:.1f}".format((end_time-start_time)*1000) + " ms).")
 
     def replot_perihel_p(self, *args):
@@ -791,7 +792,8 @@ class Plotcanvas():
         self.ax.axis('off')
         self.canvas = tkcairo.FigureCanvasTkCairo(self.fig, master=root.plot_frame)
         self.canvas.get_tk_widget().pack()
-        self.view_mode = 0
+        self.view_mode = -1
+        self.fix_earth = -1
 
     def clear(self, clear_orbits):
         self.ax.patches = []
@@ -815,14 +817,15 @@ class Plotcanvas():
     def draw(self):
         self.canvas.draw()
 
-    def plot(self, datetime, view_mode):        
-        start_time = time.time()
-        if not view_mode == self.view_mode:
+    def plot(self, datetime, view_mode, fix_earth):        
+        start_time = time.perf_counter()
+        if not (view_mode == self.view_mode and fix_earth == self.fix_earth):
             view_changed = True
             print("view changed")
         else:
             view_changed = False
         self.view_mode = view_mode
+        self.fix_earth = fix_earth
         
         ###### SET UP ######
         scale = 1.8 * self.root.guisize / 400
@@ -838,22 +841,22 @@ class Plotcanvas():
         planetcolors = np.array([[0.8, 0.6, 0.4], [0.9, 0.8, 0.5], [0.1, 0.5, 1], [0.9, 0.3, 0], [0.9, 0.8, 0.5], [0.8, 0.6, 0.4], [0, 0.7, 0.7], [0, 0.5, 0.9]])
 
         # select
-        if self.root.view_mode == 0:
+        if view_mode == 0:
             view_scale = 1
             planet_indices = range(9)
-        elif self.root.view_mode == 1:
+        elif view_mode == 1:
             view_scale = 4.8
             planet_indices = [0,1,2,3,8]
-        elif self.root.view_mode == 2:
+        elif view_mode == 2:
             view_scale = 1.5
             planet_indices = [2,3,4]
-        elif self.root.view_mode == 3:
+        elif view_mode == 3:
             view_scale = 0.8
             planet_indices = [2,3,4,5]
-        elif self.root.view_mode == 4:
+        elif view_mode == 4:
             view_scale = 0.4
             planet_indices = [4,5,6]
-        elif self.root.view_mode == 5:
+        elif view_mode == 5:
             view_scale = 0.25
             planet_indices = [4,5,6,7]
         else:
@@ -864,18 +867,16 @@ class Plotcanvas():
         time_pos = 0
         time_orb = 0
         for i in planet_indices:
-            [orb_flag_, pos_, orb_] = self.root.all_planets[i].set_date(datetime, 1)
+            if not view_changed and view_mode == 0 or (view_mode < 6 and i == 8):
+                [orb_flag_, pos_, orb_] = self.root.all_planets[i].set_date(datetime, 0)
+            else:
+                [orb_flag_, pos_, orb_] = self.root.all_planets[i].set_date(datetime, 1)
             time_pos += pos_
             time_orb += orb_
             if orb_flag_ == True:
                 view_changed = True
 
-        umlaufnr = "Umlauf Nr.: "
-        for i in range(9):
-            if i > 0:
-                umlaufnr = umlaufnr + ", "
-            umlaufnr = umlaufnr + str(self.root.all_planets[i].umlaufnr)
-        pre_time = time.time()
+        pre_time = time.perf_counter()
 
         ###### POSITIONS AND ORBITS ######
         x = np.zeros(9)
@@ -887,7 +888,7 @@ class Plotcanvas():
         py = np.zeros(9)
         pdist = np.zeros(9)
         pole = np.zeros(9)
-        if self.root.view_mode == 0:
+        if view_mode == 0:
             for i in planet_indices:
                 if i == 8:
                     [x[i], y[i]] = pol2cart(1, self.root.all_planets[i].lon)
@@ -920,6 +921,7 @@ class Plotcanvas():
         
         # rotate
         if self.root.fix_earth == 1:
+            view_changed = True # in order to clear orbits
             rot_angle = -np.radians(self.root.all_planets[2].lon)
             x_ = x * np.cos(rot_angle) - y * np.sin(rot_angle)
             y_ = x * np.sin(rot_angle) + y * np.cos(rot_angle)
@@ -937,14 +939,14 @@ class Plotcanvas():
                     oy[i][n] = oy_
                 pole[i] = pole[i] - self.root.all_planets[2].lon
 
-        calc_time = time.time()
+        calc_time = time.perf_counter()
 
         ########## CLEAR ##########
         self.clear(view_changed)
-        clr_time = time.time()
+        clr_time = time.perf_counter()
 
         ###### EQUIDISTANT VIEW ######
-        if self.root.view_mode == 0:
+        if view_mode == 0:
             
             # calc and plot planet positions and orbits
             for i in range(8):
@@ -964,7 +966,7 @@ class Plotcanvas():
 
 
         ###### REAL DISTANCES VIEWS ######
-        elif self.root.view_mode >= 1 and self.root.view_mode <= 5:
+        elif view_mode >= 1 and view_mode <= 5:
 
             for i in planet_indices:
                 
@@ -1034,7 +1036,7 @@ class Plotcanvas():
         self.draw()
         
         # measure time and print
-        end_time = time.time()
+        end_time = time.perf_counter()
         print("Plotted in " + "{:.0f}".format((end_time-start_time)*1000).rjust(4) + " ms: " \
               + "pos " + "{:.0f}".format(time_pos).rjust(3) + ", " \
               + "orb " + "{:.0f}".format(time_orb).rjust(3) + ", " \
@@ -1089,13 +1091,11 @@ class Planet():
         self.orbit = Orbit(self)
         
     def set_date(self, datetime, recalc_orbit):
-        start_time = time.time()
+        start_time = time.perf_counter()
         old_date = self.date
-        if datetime == old_date:
+        if datetime == old_date and not recalc_orbit:
             return [False, 0, 0]
         self.date = datetime
-        old_umlaufnr = self.umlaufnr
-        self.umlaufnr = int((self.date - self.calc_date_perihel_J2000).days/self.period)
 
         t = ap.time.Time(str(datetime.year) + '-' + str(datetime.month) + '-' + str(datetime.day) + ' ' + str(datetime.hour) + ':' + str(datetime.minute) + ':' + str(datetime.second), scale='utc')
         
@@ -1121,16 +1121,18 @@ class Planet():
             self.lat = self.lat.value * 180 / np.pi
             self.lon = self.lon.value * 180 / np.pi
         
-        pos_time = time.time()
+        pos_time = time.perf_counter()
 
         # vergleiche Umlaufnummer, wenn verändert, berechne Orbit neu
         orb_flag_ = False
         if recalc_orbit == 1:
+            old_umlaufnr = self.umlaufnr
+            self.umlaufnr = int((self.date - self.calc_date_perihel_J2000).days/self.period)
             if not self.umlaufnr == old_umlaufnr:
                 self.orbit.calc_precise()
                 orb_flag_ = True
         
-        orb_time = time.time()
+        orb_time = time.perf_counter()
         return [orb_flag_, (pos_time-start_time)*1000, (orb_time-pos_time)*1000]
 
 
@@ -1187,7 +1189,7 @@ class Orbit():
             self.oz.append(np.sin(np.pi/180*(self.olon[n] - self.root.aufstkn)))
 
     def calc_precise(self):
-        #start_time = time.time()
+        start_time = time.perf_counter()
         self.reset()
         nr_steps = 6
         steps = np.linspace(0, self.root.period, nr_steps)
@@ -1244,8 +1246,8 @@ class Orbit():
         [self.px, self.py, self.pz] = apc.spherical_to_cartesian(self.pdist, np.radians(self.plat), np.radians(self.plon))
         
         # measure time and print
-        #end_time = time.time()
-        #print("calculated orbit of " + self.root.name_en + " in " + "{:.1f}".format((end_time-start_time)*1000) + " ms")
+        end_time = time.perf_counter()
+        print("calculated orbit of " + self.root.name_en + " in " + "{:.1f}".format((end_time-start_time)*1000) + " ms")
 
         
 
