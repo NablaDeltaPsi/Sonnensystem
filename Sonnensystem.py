@@ -1,4 +1,4 @@
-global GUI_version; GUI_version = '3.2'
+global GUI_version; GUI_version = '3.3'
 
 import tkinter as tk
 import tkinter.font
@@ -311,9 +311,9 @@ class NewGUI():
         for i in range(9):
             if self.dropdown_elongation_var.get()==self.all_planets[i].name_de:
                 self.elongation_text.set( \
-                  "  E={:.1f}°".format(self.calc_elongation(i)) + \
-                  "  Lon={:.1f}°".format(self.all_planets[i].lon) + \
-                  "  Lat={:.1f}°".format(self.all_planets[i].lat) \
+                   " E="   + "{:.1f}°".format(self.calc_elongation(i)).rjust(6).replace(" ", "  ") + \
+                  "  Lon=" + "{:.1f}°".format(self.all_planets[i].lon).rjust(6).replace(" ", "  ") + \
+                  "  Lat=" + "{:.1f}°".format(self.all_planets[i].lat).rjust(5).replace(" ", "  ") \
                   )
         self.root.update_idletasks()
         time.sleep(0.01)
@@ -907,7 +907,7 @@ class Plotcanvas():
                 py[i] = self.root.all_planets[i].orbit.py
                 pdist[i] = self.root.all_planets[i].orbit.pdist
                 pole[i] = self.root.all_planets[i].pole
-    
+            
         # scale
         x = view_scale * x
         y = view_scale * y
@@ -915,10 +915,10 @@ class Plotcanvas():
         py = view_scale * py
         pdist = view_scale * pdist
         for i in planet_indices:
-            ox[i] = [view_scale * n for n in ox[i]]
-            oy[i] = [view_scale * n for n in oy[i]]
-            oz[i] = [view_scale * n for n in oz[i]]
-        
+            ox[i] = view_scale * np.array(ox[i])
+            oy[i] = view_scale * np.array(oy[i])
+            oz[i] = view_scale * np.array(oz[i])
+
         # rotate
         if self.root.fix_earth == 1:
             view_changed = True # in order to clear orbits
