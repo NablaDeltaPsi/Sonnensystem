@@ -104,7 +104,7 @@ def calc_date_perihel(planet, timedir, *args):
 class NewGUI():
 
     # guisize and fontsize in points, xpos and ypos in pixels!!
-    def __init__(self, guisize, fontsize, xpos, ypos, d, m, y):
+    def __init__(self, guisize, fontsize, xpos, ypos):
 
         print("NEW GUI SIZE " + str(guisize) + " FONTSIZE " + str(fontsize))
 
@@ -165,19 +165,20 @@ class NewGUI():
 
         # PLANETEN
         # https://de.wikipedia.org/wiki/Liste_der_Planeten_des_Sonnensystems
+        today = dt.date.today()
+        date_init = dt.datetime(today.year, today.month, today.day, 12, 0, 0)
         self.all_planets = []
-        #                                                           Periode   Pol          a     Exzen    Perihel     aufstKn
-        self.all_planets.append(Planet(self, 'mercury', 'Merkur',  87.96926,  315,   0.38710,  0.20563,  77.45645,   48.33167 ))
-        self.all_planets.append(Planet(self, 'venus',   'Venus',   224.7008,  342,   0.72333,  0.00677, 131.53298,   76.68063 ))
-        self.all_planets.append(Planet(self, 'earth',   'Erde',    365.2564,   90,   1.00000,  0.01671, 102.94719,  -11.26064 ))
-        self.all_planets.append(Planet(self, 'mars',    'Mars',    686.9796,  335,   1.52366,  0.09341, 336.04084,   49.57854 ))
-        self.all_planets.append(Planet(self, 'jupiter', 'Jupiter', 4332.820,  183,   5.20336,  0.04837,  14.75385,  100.55615 ))
-        self.all_planets.append(Planet(self, 'saturn',  'Saturn',  10755.70,   78,   9.53707,  0.05415,  92.43194,  113.71504 ))
-        self.all_planets.append(Planet(self, 'uranus',  'Uranus',  30687.15,   78,  19.19126,  0.04716, 170.96424,   74.22988 ))
-        self.all_planets.append(Planet(self, 'neptune', 'Neptun',  60190.03,  327,  30.06896,  0.00858,  44.97135,  131.72169 ))
-        self.all_planets.append(Planet(self, 'moon', 'Erdmond', 27.3217, 0, 0.00257, 0, 0, 0, self.all_planets[2] ))
+        #                                                                      Periode   Pol          a     Exzen    Perihel     aufstKn
+        self.all_planets.append(Planet(self, date_init, 'mercury', 'Merkur',  87.96926,  315,   0.38710,  0.20563,  77.45645,   48.33167 ))
+        self.all_planets.append(Planet(self, date_init, 'venus',   'Venus',   224.7008,  342,   0.72333,  0.00677, 131.53298,   76.68063 ))
+        self.all_planets.append(Planet(self, date_init, 'earth',   'Erde',    365.2564,   90,   1.00000,  0.01671, 102.94719,  -11.26064 ))
+        self.all_planets.append(Planet(self, date_init, 'mars',    'Mars',    686.9796,  335,   1.52366,  0.09341, 336.04084,   49.57854 ))
+        self.all_planets.append(Planet(self, date_init, 'jupiter', 'Jupiter', 4332.820,  183,   5.20336,  0.04837,  14.75385,  100.55615 ))
+        self.all_planets.append(Planet(self, date_init, 'saturn',  'Saturn',  10755.70,   78,   9.53707,  0.05415,  92.43194,  113.71504 ))
+        self.all_planets.append(Planet(self, date_init, 'uranus',  'Uranus',  30687.15,   78,  19.19126,  0.04716, 170.96424,   74.22988 ))
+        self.all_planets.append(Planet(self, date_init, 'neptune', 'Neptun',  60190.03,  327,  30.06896,  0.00858,  44.97135,  131.72169 ))
+        self.all_planets.append(Planet(self, date_init, 'moon', 'Erdmond', 27.3217, 0, 0.00257, 0, 0, 0, self.all_planets[2] ))
 
-        mydate = dt.date.today()
         width_dm = 1.5*self.fontsize
         width_yr = 3.0*self.fontsize
         width_pl = 7.0*self.fontsize
@@ -210,7 +211,7 @@ class NewGUI():
 
         self.entry_1 = tk.Entry(self.root, justify='center')
         self.entry_1.place(x=x1, y=0, height=h1, width=pts(width_dm), anchor='nw')
-        self.entry_1.insert("0",str(mydate.day))
+        self.entry_1.insert("0",str(date_init.day))
         self.entry_1.bind('<Up>', self.replot_day_p)
         self.entry_1.bind('<Down>', self.replot_day_m)
         self.entry_1.bind('<Control-Up>', self.replot_3days_p)
@@ -218,13 +219,13 @@ class NewGUI():
 
         self.entry_2 = tk.Entry(self.root, justify='center')
         self.entry_2.place(x=x3, y=0, height=h1, width=pts(width_dm), anchor='nw')
-        self.entry_2.insert("0",str(mydate.month))
+        self.entry_2.insert("0",str(date_init.month))
         self.entry_2.bind('<Up>', self.replot_month_p)
         self.entry_2.bind('<Down>', self.replot_month_m)
 
         self.entry_3 = tk.Entry(self.root, justify='center')
         self.entry_3.place(x=x5, y=0, height=h1, width=pts(width_yr), anchor='nw')
-        self.entry_3.insert("0",str(mydate.year))
+        self.entry_3.insert("0",str(date_init.year))
         self.entry_3.bind('<Up>', self.replot_year_p)
         self.entry_3.bind('<Down>', self.replot_year_m)
         self.entry_3.bind('<Control-Up>', self.replot_century_p)
@@ -298,8 +299,6 @@ class NewGUI():
         # clicked widget always focused
         self.root.bind_all("<1>", lambda event:event.widget.focus_set())
 
-        for i in range(len(self.all_planets)):
-            self.all_planets[i].set_date(dt.datetime(y, m, d, 12, 0, 0), 1)
         self.replot()
         self.root.mainloop()
 
@@ -871,9 +870,14 @@ class Plotcanvas():
             planet_indices = [2,8]
 
         ###### UPDATE PLANETS ########
+        if 2 in planet_indices:
+            calc_list = planet_indices
+        else:
+            calc_list = [2]
+            calc_list.extend(planet_indices)
         time_pos = 0
         time_orb = 0
-        for i in planet_indices:
+        for i in calc_list:
             if not view_changed and view_mode == 0 or (view_mode < 6 and i == 8):
                 [orb_flag_, pos_, orb_] = self.root.all_planets[i].set_date(datetime, 0)
             else:
@@ -904,7 +908,7 @@ class Plotcanvas():
                 phi = np.arange(0, 360.1, 1)
                 [ox[i], oy[i]] = pol2cart(i+1, phi)
         else:
-            for i in planet_indices:
+            for i in calc_list:
                 x[i]  = self.root.all_planets[i].x
                 y[i]  = self.root.all_planets[i].y
                 ox[i] = self.root.all_planets[i].orbit.ox
@@ -921,7 +925,7 @@ class Plotcanvas():
         px = view_scale * px
         py = view_scale * py
         pdist = view_scale * pdist
-        for i in planet_indices:
+        for i in calc_list:
             ox[i] = view_scale * np.array(ox[i])
             oy[i] = view_scale * np.array(oy[i])
             oz[i] = view_scale * np.array(oz[i])
@@ -938,7 +942,7 @@ class Plotcanvas():
             py_ = px * np.sin(rot_angle) + py * np.cos(rot_angle)
             px = px_
             py = py_
-            for i in planet_indices:
+            for i in calc_list:
                 for n in range(len(ox[i])):
                     ox_ = ox[i][n] * np.cos(rot_angle) - oy[i][n] * np.sin(rot_angle)
                     oy_ = ox[i][n] * np.sin(rot_angle) + oy[i][n] * np.cos(rot_angle)
@@ -1063,7 +1067,7 @@ class Plotcanvas():
 # CLASS PLANET
 # ----------------------------------------------
 class Planet():
-    def __init__(self, root, name_en, name_de, period, pole, a, excen, perihel, aufstkn, *parent):
+    def __init__(self, root, date, name_en, name_de, period, pole, a, excen, perihel, aufstkn, *parent):
         self.root = root
         self.name_en = name_en
         self.name_de = name_de
@@ -1083,8 +1087,8 @@ class Planet():
         self.x = 0
         self.y = 0
         self.z = 0
-        self.date = dt.datetime(2000, 1, 1, 12, 0, 0)
-        self.calc_date_perihel_J2000 = self.date
+        self.date = date
+        self.calc_date_perihel_J2000 = date
         self.umlaufnr = 0
         if len(parent) > 0:
             self.parent = parent[0]
@@ -1161,10 +1165,7 @@ class Orbit():
         self.px = 0
         self.py = 0
         self.pz = 0
-        if self.root.name_en == 'moon':
-            self.calc_simple()
-        else:
-            self.calc_precise()
+        self.calc_precise()
     
     def reset(self):
         self.olat = []
@@ -1293,5 +1294,5 @@ if __name__ == '__main__':
 
     # start application
     new_date = dt.date.today()
-    NewGUI(guisize, fontsize, xpos, ypos, new_date.day, new_date.month, new_date.year)
+    NewGUI(guisize, fontsize, xpos, ypos)
 
