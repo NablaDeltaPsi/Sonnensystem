@@ -1,4 +1,3 @@
-# todo: wieso plotted view 0 schneller als die Detailansichten?
 global GUI_version; GUI_version = '3.2'
 
 import tkinter as tk
@@ -14,12 +13,11 @@ import warnings
 import ctypes
 import astropy as ap
 import astropy.coordinates as apc
-mpl.use('TkCairo')
 from scipy.interpolate import interp1d, CubicSpline
 from scipy.optimize import curve_fit
 
-import warnings
 warnings.filterwarnings("ignore")
+mpl.use('TkCairo')
 
 def blanks(number):
     string = ""
@@ -788,16 +786,25 @@ class Plotcanvas():
         self.fig = mpl.figure.Figure(size, constrained_layout=True)
         self.fig.patch.set_facecolor('#000000')
         self.ax = self.fig.add_subplot(111)
+        self.ax.set_xlim(8.5*np.array([-1, 1]))
+        self.ax.set_ylim(8.5*np.array([-1, 1]))        
+        self.ax.axis('off')
         self.canvas = tkcairo.FigureCanvasTkCairo(self.fig, master=root.plot_frame)
         self.canvas.get_tk_widget().pack()
 
     def clear(self):
-        self.ax.cla()
+        #self.ax.cla()
+        for line in self.ax.get_lines():
+            line.remove()
+        self.ax.patches = []
+    
+    def draw(self):
         self.canvas.draw()
 
     def plot(self, datetime):
         start_time = time.time()
         self.clear()
+        clr_time = time.time()
         
         ###### SET UP ######
         scale = 1.8 * self.root.guisize / 400
@@ -836,15 +843,19 @@ class Plotcanvas():
             planet_indices = [2,8]
 
         ###### UPDATE PLANETS ########
+        time_pos = 0
+        time_orb = 0
         for i in planet_indices:
-            self.root.all_planets[i].set_date(datetime, 1)
+            [pos_, orb_] = self.root.all_planets[i].set_date(datetime, 1)
+            time_pos += pos_
+            time_orb += orb_
 
         umlaufnr = "Umlauf Nr.: "
         for i in range(9):
             if i > 0:
                 umlaufnr = umlaufnr + ", "
             umlaufnr = umlaufnr + str(self.root.all_planets[i].umlaufnr)
-        print(umlaufnr)
+        pre_time = time.time()
 
         ###### POSITIONS AND ORBITS ######
         x = np.zeros(9)
@@ -882,7 +893,7 @@ class Plotcanvas():
         px = view_scale * px
         py = view_scale * py
         pdist = view_scale * pdist
-        for i in range(9):
+        for i in planet_indices:
             ox[i] = [view_scale * n for n in ox[i]]
             oy[i] = [view_scale * n for n in oy[i]]
             oz[i] = [view_scale * n for n in oz[i]]
@@ -898,13 +909,15 @@ class Plotcanvas():
             py_ = px * np.sin(rot_angle) + py * np.cos(rot_angle)
             px = px_
             py = py_
-            for i in range(9):
+            for i in planet_indices:
                 for n in range(len(ox[i])):
                     ox_ = ox[i][n] * np.cos(rot_angle) - oy[i][n] * np.sin(rot_angle)
                     oy_ = ox[i][n] * np.sin(rot_angle) + oy[i][n] * np.cos(rot_angle)
                     ox[i][n] = ox_
                     oy[i][n] = oy_
                 pole[i] = pole[i] - self.root.all_planets[2].lon
+
+        calc_time = time.time()
 
         ###### EQUIDISTANT VIEW ######
         if self.root.view_mode == 0:
@@ -988,19 +1001,17 @@ class Plotcanvas():
             self.ax.plot([0, -15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, -15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, zorder=0)
             self.ax.plot([0, 15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, 15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, linestyle='--', zorder=0)
 
-
-        # GENERAL PLOT SETTINGS AND TEXT
-
-        self.ax.set_xlim(8.5*np.array([-1, 1]))
-        self.ax.set_ylim(8.5*np.array([-1, 1]))
-        
-        self.ax.axis('off')
-        
-        self.canvas.draw()
+        # DRAW
+        self.draw()
         
         # measure time and print
         end_time = time.time()
-        print("plotted in " + "{:.1f}".format((end_time-start_time)*1000) + " ms")
+        print("Plotted in " + "{:.0f}".format((end_time-start_time)*1000).rjust(4) + " ms: " \
+              + "clr " + "{:.0f}".format((clr_time-start_time)*1000).rjust(3) + ", " \
+              + "pos " + "{:.0f}".format(time_pos).rjust(3) + ", " \
+              + "orb " + "{:.0f}".format(time_orb).rjust(3) + ", " \
+              + "calc " + "{:.0f}".format((calc_time-pre_time)*1000).rjust(3) + ", " \
+              + "draw " + "{:.0f}".format((end_time-calc_time)*1000).rjust(3) + ")")
 
 
 
@@ -1049,9 +1060,10 @@ class Planet():
         self.orbit = Orbit(self)
         
     def set_date(self, datetime, recalc_orbit):
+        start_time = time.time()
         old_date = self.date
         if datetime == old_date:
-            return
+            return [0, 0]
         self.date = datetime
         old_umlaufnr = self.umlaufnr
         self.umlaufnr = int((self.date - self.calc_date_perihel_J2000).days/self.period)
@@ -1080,10 +1092,15 @@ class Planet():
             self.lat = self.lat.value * 180 / np.pi
             self.lon = self.lon.value * 180 / np.pi
         
+        pos_time = time.time()
+
         # vergleiche Umlaufnummer, wenn verändert, berechne Orbit neu
         if recalc_orbit == 1:
             if not self.umlaufnr == old_umlaufnr:
                 self.orbit.calc_precise()
+        
+        orb_time = time.time()
+        return [(pos_time-start_time)*1000, (orb_time-pos_time)*1000]
 
 
 # ----------------------------------------------
@@ -1139,7 +1156,7 @@ class Orbit():
             self.oz.append(np.sin(np.pi/180*(self.olon[n] - self.root.aufstkn)))
 
     def calc_precise(self):
-        start_time = time.time()
+        #start_time = time.time()
         self.reset()
         nr_steps = 6
         steps = np.linspace(0, self.root.period, nr_steps)
@@ -1196,8 +1213,8 @@ class Orbit():
         [self.px, self.py, self.pz] = apc.spherical_to_cartesian(self.pdist, np.radians(self.plat), np.radians(self.plon))
         
         # measure time and print
-        end_time = time.time()
-        print("calculated orbit of " + self.root.name_en + " in " + "{:.1f}".format((end_time-start_time)*1000) + " ms")
+        #end_time = time.time()
+        #print("calculated orbit of " + self.root.name_en + " in " + "{:.1f}".format((end_time-start_time)*1000) + " ms")
 
         
 
