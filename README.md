@@ -25,15 +25,12 @@ Sprung zu Elongation mit bester Sichtbarkeit: Mit der Taste E (für Elongation) 
 
 ↑ Abbildung: Durchlaufen der kommenden Marsoppositionen mit fixierter Erde durch Auswahl des Mars am unteren Rand, einmaliges Drücken der Schaltfläche F und wiederholtes Drücken der Schaltfläche E. Man beachte die verschiedenen Stellungen des Marspols bei den Oppositionen. Bei den nahen Oppositionen ist stets der Südpol des Mars zu sehen.
 
-![grafik](https://user-images.githubusercontent.com/98178269/210572642-2b7ffc66-3dd3-45d5-bb28-ca6644b06e3e.png)
+![Saturnopposition_Ringöffnung](https://user-images.githubusercontent.com/98178269/218274845-f643a8e1-0853-4f70-834b-44165b03945e.png)
+![Saturnopposition_Kantenstellung](https://user-images.githubusercontent.com/98178269/218274664-aebbd638-3ba7-43af-b5f5-8da09c615bb1.png)
 
-↑ Abbildung: Saturnopposition mit großer Ringöffnung und Blick auf Nordpol (03.06.2016)
+↑ Abbildung: Saturnopposition mit Nord-Ringöffnung (03.06.2016) / mit Kantenstellung (07.09.2024)
 
-![grafik](https://user-images.githubusercontent.com/98178269/210572862-f6f75aae-6d1d-4e07-8814-fed618541e6a.png)
-
-↑ Abbildung: Saturnopposition mit Kantenstellung (07.09.2024)
-
-![grafik](https://user-images.githubusercontent.com/98178269/210573619-6b247b82-38fb-4899-ad93-4efb888aa01c.png)
+![Supermond](https://user-images.githubusercontent.com/98178269/218272803-7f36d582-3b90-47c4-b65f-b496925fd1ca.png)
 
 ↑ Abbildung: Supermond (01.08.2023)
 
