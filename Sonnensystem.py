@@ -306,7 +306,7 @@ class NewGUI():
         d = int(self.entry_1.get())
         m = int(self.entry_2.get())
         y = int(self.entry_3.get())
-        self.plot_window.plot(dt.datetime(y, m, d, 12, 0, 0))
+        self.plot_window.plot(dt.datetime(y, m, d, 12, 0, 0), self.view_mode)
         for i in range(9):
             if self.dropdown_elongation_var.get()==self.all_planets[i].name_de:
                 self.elongation_text.set( \
@@ -791,20 +791,38 @@ class Plotcanvas():
         self.ax.axis('off')
         self.canvas = tkcairo.FigureCanvasTkCairo(self.fig, master=root.plot_frame)
         self.canvas.get_tk_widget().pack()
+        self.view_mode = 0
 
-    def clear(self):
-        #self.ax.cla()
-        for line in self.ax.get_lines():
-            line.remove()
+    def clear(self, clear_orbits):
         self.ax.patches = []
+        if clear_orbits:
+            self.ax.lines = []
+        else:
+            # Entferne nur farbige (Erde) oder schwarze (Pole) Linien
+            to_be_removed = []
+            lines = self.ax.lines
+            for line in lines:
+                thiscolor = line.get_color()
+                thiscolor = mpl.colors.to_rgb(thiscolor)
+                if not (thiscolor[0] == thiscolor[1] and thiscolor[1] == thiscolor[2]) or thiscolor[0] == 0:
+                    to_be_removed.append(1)
+                else:
+                    to_be_removed.append(0)
+            for i in range(len(to_be_removed)-1,0,-1):
+                if to_be_removed[i] == 1:
+                    lines[i].remove()
     
     def draw(self):
         self.canvas.draw()
 
-    def plot(self, datetime):
+    def plot(self, datetime, view_mode):        
         start_time = time.time()
-        self.clear()
-        clr_time = time.time()
+        if not view_mode == self.view_mode:
+            view_changed = True
+            print("view changed")
+        else:
+            view_changed = False
+        self.view_mode = view_mode
         
         ###### SET UP ######
         scale = 1.8 * self.root.guisize / 400
@@ -846,9 +864,11 @@ class Plotcanvas():
         time_pos = 0
         time_orb = 0
         for i in planet_indices:
-            [pos_, orb_] = self.root.all_planets[i].set_date(datetime, 1)
+            [orb_flag_, pos_, orb_] = self.root.all_planets[i].set_date(datetime, 1)
             time_pos += pos_
             time_orb += orb_
+            if orb_flag_ == True:
+                view_changed = True
 
         umlaufnr = "Umlauf Nr.: "
         for i in range(9):
@@ -919,12 +939,17 @@ class Plotcanvas():
 
         calc_time = time.time()
 
+        ########## CLEAR ##########
+        self.clear(view_changed)
+        clr_time = time.time()
+
         ###### EQUIDISTANT VIEW ######
         if self.root.view_mode == 0:
             
             # calc and plot planet positions and orbits
             for i in range(8):
-                self.ax.plot(ox[i], oy[i], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
+                if view_changed:
+                    self.ax.plot(ox[i], oy[i], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
                 self.ax.add_patch(plt.Circle((x[i], y[i]), planetsizes[i], color=planetcolors[i,:], zorder=2))
 
             # plot sun and saturn rings
@@ -947,12 +972,14 @@ class Plotcanvas():
                     continue
 
                 # orbits
-                self.ax.plot(ox[i], oy[i], color=[0.25, 0.25, 0.25], linewidth=Orbit_pol_lw, zorder=0)
-                if not (i==2):
-                    self.ax.plot(select_larger_zero(ox[i], oz[i]), select_larger_zero(oy[i], oz[i]), color=[0.35, 0.35, 0.35], linewidth=Orbit_pol_lw, zorder=0)
-                
+                if view_changed:
+                    self.ax.plot(ox[i], oy[i], color=[0.25, 0.25, 0.25], linewidth=Orbit_pol_lw, zorder=0)
+                    if not (i==2):
+                        self.ax.plot(select_larger_zero(ox[i], oz[i]), select_larger_zero(oy[i], oz[i]), color=[0.35, 0.35, 0.35], linewidth=Orbit_pol_lw, zorder=0)
+
                 # perihels
-                self.ax.plot([px[i] * (1 - Perihel_size / pdist[i]), px[i]], [py[i] * (1 - Perihel_size / pdist[i]), py[i]], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
+                if view_changed:
+                    self.ax.plot([px[i] * (1 - Perihel_size / pdist[i]), px[i]], [py[i] * (1 - Perihel_size / pdist[i]), py[i]], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
                 
                 # planets
                 self.ax.add_patch(plt.Circle((x[i], y[i]), planetsizes[i], color=planetcolors[i,:], zorder=2))
@@ -988,14 +1015,16 @@ class Plotcanvas():
         else:
 
             # orbit
-            self.ax.plot(ox[8], oy[8], color=[0.25, 0.25, 0.25], linewidth=Orbit_pol_lw, zorder=0)
+            if view_changed:
+                self.ax.plot(ox[8], oy[8], color=[0.25, 0.25, 0.25], linewidth=Orbit_pol_lw, zorder=0)
 
             # planets
             self.ax.add_patch(plt.Circle((0, 0), planetsizes[2], color=planetcolors[2,:], zorder=1))
             self.ax.add_patch(plt.Circle((x[8], y[8]), Moon_size, color=[0.7, 0.7, 0.7], zorder=2))
 
-            # perihels
-            self.ax.plot([px[8] * (1 - Perihel_size / pdist[8]), px[8]], [py[8] * (1 - Perihel_size / pdist[8]), py[8]], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
+            # perihel
+            if view_changed:
+                self.ax.plot([px[8] * (1 - Perihel_size / pdist[8]), px[8]], [py[8] * (1 - Perihel_size / pdist[8]), py[8]], color=[0.3, 0.3, 0.3], linewidth=Orbit_pol_lw, zorder=0)
 
             # earthline
             self.ax.plot([0, -15*x[2]/np.sqrt(x[2]**2 + y[2]**2)], [0, -15*y[2]/np.sqrt(x[2]**2 + y[2]**2)], color=0.4*planetcolors[2,:], linewidth=Orbit_pol_lw, zorder=0)
@@ -1007,11 +1036,11 @@ class Plotcanvas():
         # measure time and print
         end_time = time.time()
         print("Plotted in " + "{:.0f}".format((end_time-start_time)*1000).rjust(4) + " ms: " \
-              + "clr " + "{:.0f}".format((clr_time-start_time)*1000).rjust(3) + ", " \
               + "pos " + "{:.0f}".format(time_pos).rjust(3) + ", " \
               + "orb " + "{:.0f}".format(time_orb).rjust(3) + ", " \
               + "calc " + "{:.0f}".format((calc_time-pre_time)*1000).rjust(3) + ", " \
-              + "draw " + "{:.0f}".format((end_time-calc_time)*1000).rjust(3) + ")")
+              + "clr " + "{:.0f}".format((clr_time-calc_time)*1000).rjust(3) + ", " \
+              + "draw " + "{:.0f}".format((end_time-clr_time)*1000).rjust(3) + ")")
 
 
 
@@ -1063,7 +1092,7 @@ class Planet():
         start_time = time.time()
         old_date = self.date
         if datetime == old_date:
-            return [0, 0]
+            return [False, 0, 0]
         self.date = datetime
         old_umlaufnr = self.umlaufnr
         self.umlaufnr = int((self.date - self.calc_date_perihel_J2000).days/self.period)
@@ -1095,12 +1124,14 @@ class Planet():
         pos_time = time.time()
 
         # vergleiche Umlaufnummer, wenn verändert, berechne Orbit neu
+        orb_flag_ = False
         if recalc_orbit == 1:
             if not self.umlaufnr == old_umlaufnr:
                 self.orbit.calc_precise()
+                orb_flag_ = True
         
         orb_time = time.time()
-        return [(pos_time-start_time)*1000, (orb_time-pos_time)*1000]
+        return [orb_flag_, (pos_time-start_time)*1000, (orb_time-pos_time)*1000]
 
 
 # ----------------------------------------------
