@@ -376,7 +376,7 @@ class NewGUI():
                                 self.replot_date(new_date.day, new_date.month, new_date.year)
                                 break
                         if i > 2:
-                            if not np.sign(new_elong_diff) == np.sign(old_elong_diff) and new_elong > 170:
+                            if not np.sign(new_elong_diff) == np.sign(old_elong_diff) and new_elong > 120:
                                 new_date = Datum_aktuell + dt.timedelta(timedelta-timedir/abs(timedir))
                                 self.replot_date(new_date.day, new_date.month, new_date.year)
                                 break
@@ -385,7 +385,14 @@ class NewGUI():
                         return                        
                     old_elong = new_elong
                     old_elong_diff = new_elong_diff
-                    if i > 2:
+                    if i == 8:
+                        if new_elong_diff < 0:
+                            # Nimmt die Elongation noch ab kann man schneller springen
+                            daydiff = 5
+                        else:
+                            # Nimmt die Elongation zu muss man umso langsamer werden je näher an 180
+                            daydiff = 1
+                    elif i > 2:
                         if new_elong_diff < 0:
                             # Nimmt die Elongation noch ab kann man schneller springen
                             daydiff = 30
