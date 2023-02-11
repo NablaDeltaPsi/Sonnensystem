@@ -19,7 +19,7 @@ Winkelanzeige: Am unteren Rand kann ein Planet oder der Mond ausgewählt werden 
 
 Erde fixieren: Mit der Taste F (für Fixierung) oder der entsprechenden Schaltfläche kann die Position der Erde fixiert werden, sodass die Orbits und Perihels selbst mit laufender Zeit drehen.
 
-Sprung zu Elongation mit bester Sichtbarkeit: Mit der Taste E (für Elongation) oder der entsprechenden Schaltfläche kann zu Elongationen mit bester Sichtbarkeit des am unteren Rand ausgewählten Planeten gesprungen werden. Mit bester Sichtbarkeit ist bei den äußeren Planeten die Opposition (E=180°), bei den inneren Planeten ein lokales Maximum der Elongation (Merkur: E ca. 18°-28°, Venus: E ca. 45°-48°) gemeint. Bei den inneren Planeten wechseln sich bei der Funktion Morgen- und Abendsichtbarkeit ab. Oft ist eine fixierte Erde (siehe vorheriger Abschnitt) hier hilfreich.
+Sprung zu Elongation mit bester Sichtbarkeit: Mit der Taste E (für Elongation) oder der entsprechenden Schaltfläche kann zu Elongationen mit bester Sichtbarkeit des am unteren Rand ausgewählten Planeten gesprungen werden. Mit bester Sichtbarkeit ist bei den äußeren Planeten und dem Erdmond die Opposition (E=180°), bei den inneren Planeten ein lokales Maximum der Elongation (Merkur: E ca. 18°-28°, Venus: E ca. 45°-48°) gemeint. Bei den inneren Planeten wechseln sich bei der Funktion Morgen- und Abendsichtbarkeit ab. Oft ist eine fixierte Erde (siehe vorheriger Abschnitt) hier hilfreich.
 
 ![Mars](https://user-images.githubusercontent.com/98178269/215596002-ed5a2ec9-be7f-4099-a945-97b709e6b095.gif)
 
