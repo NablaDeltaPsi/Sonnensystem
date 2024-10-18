@@ -1,20 +1,21 @@
-global GUI_version; GUI_version = '3.3'
+# required packages besides python standard modules (https://docs.python.org/3/library/index.html)
+# parenthesis gives the version that worked with python (3.9.5) and pyinstaller (6.10.0)
+# numpy (1.26.4), matplotlib (3.9.2), scipy (1.13.1), astropy (6.0.1)
 
 import tkinter as tk
 import tkinter.font
-import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_tkcairo as tkcairo
-import datetime as dt
-import os
-import time
-import warnings
-import ctypes
+import os, time, warnings, ctypes, datetime as dt, numpy as np
 import astropy as ap
 import astropy.coordinates as apc
 from scipy.interpolate import interp1d, CubicSpline
 from scipy.optimize import curve_fit
+
+GUI_VERSION = "3.4"
+GUI_NAME = "Sonnensystem"
+TOTAL_SCALE_FACTOR = 1.8
 
 warnings.filterwarnings("ignore")
 mpl.use('TkCairo')
@@ -111,7 +112,7 @@ class NewGUI():
         self.guisize = guisize
         self.fontsize = fontsize
         self.root = tk.Tk()
-        self.root.title("Sonnensystem (v" + GUI_version + ")")
+        self.root.title(GUI_NAME + " (v" + GUI_VERSION + ")")
         self.root.resizable(False, False)
         self.root.configure(background='black')
         self.output = True
@@ -142,7 +143,7 @@ class NewGUI():
         self.root.protocol("WM_DELETE_WINDOW",  self.on_close)
 
         try:
-            self.root.iconbitmap('Sonnensystem.ico')
+            self.root.iconbitmap(GUI_NAME + ".ico")
         except:
             print("Icon nicht gefunden... Fahre fort.")
 
@@ -201,6 +202,11 @@ class NewGUI():
 
         h1 = pts(1.5*self.fontsize)
         h2 = pts(1.5*self.fontsize/2)
+
+        self.plot_frame = tk.Frame()
+        self.plot_frame.place(relx=0.5, rely=0.5, height=pts(self.guisize), width=pts(self.guisize), anchor='center')
+        self.plot_frame.configure(bg='#000000')
+        self.plot_window = Plotcanvas(self)
 
         self.button_view = tk.Button(self.root, text="O", command=self.switch_view)
         self.button_view.place(relx=1, x=pts('-', 4*width_vw), y=0, height=h1, width=pts(width_vw), anchor='ne')
@@ -296,10 +302,6 @@ class NewGUI():
         self.selection_text = tk.StringVar()
         self.selection_label = tk.Label(self.root, textvariable=self.selection_text, bg='#000000', fg='#aaaaaa', anchor='w')
         self.selection_label.place(x=0, y=h1, height=h1, relwidth=1, anchor='nw')
-
-        self.plot_frame = tk.Frame()
-        self.plot_frame.place(x=0, rely=1, y=pts('-', h1), height=pts(self.guisize), width=pts(self.guisize), anchor='sw')
-        self.plot_window = Plotcanvas(self, (15,15))
 
         # clicked widget always focused
         self.root.bind_all("<1>", lambda event:event.widget.focus_set())
@@ -780,7 +782,7 @@ class NewGUI():
         NewGUI(self.guisize, self.fontsize - 1, xpos, ypos, d, m, y)
 
     def on_close(self):
-        with open("Sonnensystem.conf", "w") as conf:
+        with open(GUI_NAME + ".conf", "w") as conf:
             conf.write(self.root.geometry() + '#' + str(self.guisize) + '#' + str(self.fontsize))
         self.root.destroy()
 
@@ -793,23 +795,28 @@ class NewGUI():
 # CLASS PLOTCANVAS
 # ----------------------------------------------
 class Plotcanvas():
-    def __init__(self, root, size):
+    def __init__(self, root):
         self.root = root
-        self.fig = mpl.figure.Figure(size, constrained_layout=True)
+        self.fig = mpl.figure.Figure(figsize=(0.1,0.1), tight_layout=None, constrained_layout=None)
         self.fig.patch.set_facecolor('#000000')
-        self.ax = self.fig.add_subplot(111)
-        self.ax.set_xlim(8.5*np.array([-1, 1]))
-        self.ax.set_ylim(8.5*np.array([-1, 1]))        
+        #self.ax = self.fig.add_subplot(111)
+        self.ax = self.fig.add_axes([0, 0, 1, 1])
+        self.ax.set_xlim(10*np.array([-1, 1]))
+        self.ax.set_ylim(10*np.array([-1, 1]))
+        self.ax.set_aspect('equal')
         self.ax.axis('off')
         self.canvas = tkcairo.FigureCanvasTkCairo(self.fig, master=root.plot_frame)
-        self.canvas.get_tk_widget().pack()
+        self.canvas.get_tk_widget().place(relx=0.5, rely=0.5, height=pts(self.root.guisize), width=pts(self.root.guisize), anchor='center')
+        #self.canvas.get_tk_widget().pack()
         self.view_mode = -1
         self.fix_earth = -1
 
     def clear(self, clear_orbits):
-        self.ax.patches = []
+        for patch in list(self.ax.patches):
+            patch.remove()
         if clear_orbits:
-            self.ax.lines = []
+            for line in list(self.ax.lines):
+                line.remove()
         else:
             # Entferne nur farbige (Erde) oder schwarze (Pole) Linien
             to_be_removed = []
@@ -839,39 +846,39 @@ class Plotcanvas():
         self.fix_earth = fix_earth
         
         ###### SET UP ######
-        scale = 1.8 * self.root.guisize / 400
-        Orbit_pol_lw = scale * 1.0
-        Moon_size = 0.07
-        Perihel_size = 0.3
-        Sun_size = 0.45
-        Moon_orbit = 0.5
-        Saturnring_inner = 0.30
-        Saturnring_outer = 0.38
+        total_scale = TOTAL_SCALE_FACTOR * self.root.guisize / 400
+        Orbit_pol_lw = 1.0 * total_scale
+        Moon_size = 0.07 * total_scale
+        Perihel_size = 0.3 * total_scale
+        Sun_size = 0.45 * total_scale
+        Moon_orbit = 0.5 * total_scale
+        Saturnring_inner = 0.30 * total_scale
+        Saturnring_outer = 0.38 * total_scale
 
-        planetsizes = 0.009 * np.array([15, 24, 25, 22, 40, 23, 30, 30])
+        planetsizes = 0.009 * np.array([15, 24, 25, 22, 40, 23, 30, 30]) * total_scale
         planetcolors = np.array([[0.8, 0.6, 0.4], [0.9, 0.8, 0.5], [0.1, 0.5, 1], [0.9, 0.3, 0], [0.9, 0.8, 0.5], [0.8, 0.6, 0.4], [0, 0.7, 0.7], [0, 0.5, 0.9]])
 
         # select
         if view_mode == 0:
-            view_scale = 1
+            view_scale = 1 * total_scale
             planet_indices = range(9)
         elif view_mode == 1:
-            view_scale = 4.8
+            view_scale = 4.8 * total_scale
             planet_indices = [0,1,2,3,8]
         elif view_mode == 2:
-            view_scale = 1.5
+            view_scale = 1.5 * total_scale
             planet_indices = [2,3,4]
         elif view_mode == 3:
-            view_scale = 0.8
+            view_scale = 0.8 * total_scale
             planet_indices = [2,3,4,5]
         elif view_mode == 4:
-            view_scale = 0.4
+            view_scale = 0.4 * total_scale
             planet_indices = [4,5,6]
         elif view_mode == 5:
-            view_scale = 0.25
+            view_scale = 0.25 * total_scale
             planet_indices = [4,5,6,7]
         else:
-            view_scale = 2000
+            view_scale = 2000 * total_scale
             planet_indices = [2,8]
 
         ###### UPDATE PLANETS ########
@@ -1278,8 +1285,8 @@ if __name__ == '__main__':
             print("SetProcessDpiAwareness(1) nicht erfolgreich... fahre fort.")
 
     # read config file
-    if os.path.isfile("Sonnensystem.conf"): 
-        with open("Sonnensystem.conf", "r") as conf:
+    if os.path.isfile(GUI_NAME + ".conf"): 
+        with open(GUI_NAME + ".conf", "r") as conf:
             confstring = conf.read()
             pluspos = confstring.find("+")
             hashtagpos = confstring.find("#")

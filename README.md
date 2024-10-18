@@ -1,5 +1,5 @@
 
-## Sonnensystem
+## Sonnensystem <img src="Sonnensystem.ico" width=30 align="right">
 
 Python GUI zur Ansicht der Planetenstellungen bei beliebigen Daten.
 
